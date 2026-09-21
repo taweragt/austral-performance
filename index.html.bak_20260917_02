@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Resumo semanal de performance da conta 4Medic para reuniões rápidas.">
+  <title>4Medic | Resumo rápido da conta</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#resumo">Ir para o resumo</a>
+
+  <header class="topbar">
+    <a class="brand" href="#resumo" aria-label="4Medic — início">
+      <span class="brand-mark"><img src="./logo-4medic-square.jpg" alt="Símbolo 4M"></span>
+      <span class="brand-copy"><strong>4Medic</strong><small>Reunião de performance</small></span>
+    </a>
+
+    <div class="filters" aria-label="Filtros do acompanhamento">
+      <div class="budget-strip" aria-label="Orçamento mensal">
+        <span id="meta-budget-label">Meta <strong id="meta-budget">R$ 2 mil</strong></span>
+        <span id="google-budget-label">Google <strong id="google-budget">R$ 4,5 mil</strong></span>
+        <button class="budget-edit" id="budget-open" type="button" aria-label="Editar orçamento mensal" title="Editar orçamento"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L8 18l-4 1 1-4z"/></svg></button>
+      </div>
+      <label>
+        <span>Cliente</span>
+        <select id="client-select" aria-label="Selecionar cliente"></select>
+      </label>
+      <label>
+        <span>Semana</span>
+        <select id="week-select" aria-label="Selecionar semana"></select>
+      </label>
+      <button class="history-trigger" id="history-open" type="button">Ver histórico</button>
+      <button class="import-trigger" id="import-open" type="button">Importar semana</button>
+      <button class="budget-trigger-mobile" id="budget-open-mobile" type="button">Editar orçamento</button>
+    </div>
+  </header>
+
+  <main id="resumo" class="meeting-sheet">
+    <section class="account-status" aria-labelledby="status-title">
+      <div class="status-signal" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div>
+        <p class="overline">Situação da conta</p>
+        <h1 id="status-title">Dados protegidos</h1>
+      </div>
+      <p id="status-copy">Entre para carregar o resumo da conta.</p>
+      <span class="status-pill" id="status-pill">Restrito</span>
+    </section>
+
+    <div class="overview-grid">
+      <div class="work-column">
+        <section class="platforms" aria-label="Resumo das plataformas">
+          <article class="platform-card meta-card">
+            <header>
+              <div class="platform-name"><span class="platform-icon">M</span><div><p>Meta e Instagram</p><small id="meta-source-label">Registro manual</small></div></div>
+              <div class="platform-tools"><span class="platform-health good" id="meta-health">Melhorou</span><button class="metric-edit" type="button" data-platform="meta" aria-label="Editar indicadores do Meta" title="Editar indicadores"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L8 18l-4 1 1-4z"/></svg></button></div>
+            </header>
+            <div class="metric-list" id="meta-metrics"></div>
+          </article>
+
+          <article class="platform-card google-card" id="google-card">
+            <header>
+              <div class="platform-name"><span class="platform-icon">G</span><div><p>Google Ads</p><small id="google-source-label">Dados confirmados</small></div></div>
+              <div class="platform-tools"><span class="platform-health bad" id="google-health">Piorou</span><button class="metric-edit" type="button" data-platform="google" aria-label="Editar indicadores do Google" title="Editar indicadores"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L8 18l-4 1 1-4z"/></svg></button></div>
+            </header>
+            <div class="metric-list" id="google-metrics"></div>
+            <p class="plain-insight" id="google-insight"></p>
+          </article>
+        </section>
+
+        <section class="meeting-notes" aria-labelledby="actions-title">
+          <div class="actions-block">
+            <div class="section-title">
+              <div><p class="overline">Saída da reunião</p><h2 id="actions-title">Próximas ações</h2></div>
+              <span id="pending-count">—</span>
+            </div>
+            <div id="action-list" class="action-list"></div>
+            <form id="quick-action-form" class="quick-action-form">
+              <label class="sr-only" for="quick-action">Nova ação</label>
+              <input id="quick-action" type="text" placeholder="Adicionar uma ação rápida" autocomplete="off">
+              <button type="submit" aria-label="Adicionar ação"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+            </form>
+          </div>
+
+          <div class="notes-block">
+            <div class="section-title"><div><p class="overline">Durante a reunião</p><h2>Anotação rápida</h2></div></div>
+            <label class="sr-only" for="quick-notes">Anotação rápida da reunião</label>
+            <textarea id="quick-notes" placeholder="Hipótese, decisão ou contexto..."></textarea>
+            <small>Salvo automaticamente no banco seguro.</small>
+          </div>
+        </section>
+      </div>
+
+      <aside class="ad-week" aria-labelledby="ad-title">
+        <div class="ad-heading">
+          <div><p class="overline">Anúncio da semana</p><h2 id="ad-title">Peça associada</h2></div>
+          <div class="ad-actions">
+            <button id="edit-ad-link" type="button" aria-label="Editar link do anúncio" title="Editar link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L8 18l-4 1 1-4z"/></svg></button>
+            <label class="icon-control" for="creative-upload" aria-label="Enviar print do criativo" title="Enviar print"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 13l2.5-2.5L14 14l2-2 4 4M8.5 9h.01"/></svg><input id="creative-upload" type="file" accept="image/png,image/jpeg,image/webp"></label>
+            <button id="clear-creative-image" type="button" aria-label="Remover print e voltar ao post do Instagram" title="Usar post do Instagram" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-8 0l1 13h8l1-13M10 11v5m4-5v5"/></svg></button>
+            <a id="ad-open" href="#" target="_blank" rel="noopener noreferrer" aria-label="Abrir anúncio no Instagram" title="Abrir anúncio"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 16L16 8M9 8h7v7"/></svg></a>
+          </div>
+        </div>
+        <div class="creative-stage" id="creative-stage">
+          <iframe class="instagram-frame" id="instagram-frame" title="Publicação do Instagram associada à semana" loading="eager" allowtransparency="true"></iframe>
+          <img class="manual-creative" id="manual-creative" alt="Print do criativo da semana" hidden>
+          <a class="ad-preview" id="ad-preview-link" href="#" target="_blank" rel="noopener noreferrer" aria-label="Abrir prévia ilustrativa do anúncio da semana no Instagram" hidden>
+            <span>4MEDIC</span>
+            <strong>Mais tempo para<br>cuidar.<br><em>Menos tempo<br>administrando.</em></strong>
+            <div class="ad-lines"><i></i><i></i><i></i></div>
+            <small>Prévia indisponível</small>
+          </a>
+        </div>
+        <p class="creative-status" id="creative-status" aria-live="polite">Entre para carregar o criativo.</p>
+        <div class="creative-link">
+          <span>Link do criativo</span>
+          <a id="ad-url-display" href="#" target="_blank" rel="noopener noreferrer">Nenhum link carregado</a>
+        </div>
+        <form class="ad-link-form" id="ad-link-form" hidden novalidate>
+          <label for="ad-link-input">Cole o link do criativo desta semana</label>
+          <div><input id="ad-link-input" type="url" inputmode="url" autocomplete="url" placeholder="https://www.instagram.com/p/..."><button type="submit">Salvar</button></div>
+          <small id="ad-link-feedback" aria-live="polite"></small>
+        </form>
+        <p>Se a publicação não aparecer, use o botão de imagem para enviar um print.</p>
+      </aside>
+    </div>
+  </main>
+
+  <dialog class="budget-dialog" id="budget-dialog" aria-labelledby="budget-title">
+    <form id="budget-form">
+      <div class="budget-head">
+        <div><p class="overline">Planejamento mensal</p><h2 id="budget-title">Editar orçamento</h2><p id="budget-scope">Atualize os valores previstos para a conta selecionada.</p></div>
+        <button id="budget-close" type="button" aria-label="Fechar edição de orçamento"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="budget-body">
+        <div class="field-group">
+          <label for="meta-budget-input">Meta e Instagram</label>
+          <div class="currency-field"><span>R$</span><input id="meta-budget-input" type="number" min="0" step="0.01" inputmode="decimal" required></div>
+        </div>
+        <div class="field-group" id="google-budget-field">
+          <label for="google-budget-input">Google Ads</label>
+          <div class="currency-field"><span>R$</span><input id="google-budget-input" type="number" min="0" step="0.01" inputmode="decimal"></div>
+        </div>
+        <p class="budget-feedback" id="budget-feedback" aria-live="polite">Os valores serão salvos no cadastro deste cliente.</p>
+      </div>
+      <div class="budget-footer">
+        <button class="secondary-button" id="budget-cancel" type="button">Cancelar</button>
+        <button class="primary-button" type="submit">Salvar orçamento</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="history-dialog" id="history-dialog" aria-labelledby="history-title">
+    <div class="history-head">
+      <div><p class="overline">Seis registros</p><h2 id="history-title">Histórico da conta</h2><p>As variações da tela sempre usam a linha imediatamente anterior como referência.</p></div>
+      <button id="history-close" type="button" aria-label="Fechar histórico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="history-summary" id="history-summary"></div>
+    <div class="history-table-wrap">
+      <table class="history-table">
+        <thead><tr><th>Data</th><th id="history-meta-count">Meta</th><th id="history-meta-cost">Custo Meta</th><th>Tráfego</th><th>Seguidores</th><th>Google leads</th><th>CPL Google</th></tr></thead>
+        <tbody id="history-body"></tbody>
+      </table>
+    </div>
+    <p class="history-note">As variações usam sempre o registro imediatamente anterior do mesmo cliente.</p>
+  </dialog>
+
+  <dialog class="metrics-dialog" id="metrics-dialog" aria-labelledby="metrics-title">
+    <form id="metrics-form">
+      <div class="metrics-head">
+        <div><p class="overline">Estratégia da conta</p><h2 id="metrics-title">Editar indicadores</h2><p id="metrics-scope"></p></div>
+        <button id="metrics-close" type="button" aria-label="Fechar edição"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="metrics-body">
+        <p>Marque o que deve aparecer no resumo. Use as setas para definir a ordem da reunião.</p>
+        <div class="metric-options" id="metric-options"></div>
+        <p class="metrics-feedback" id="metrics-feedback" aria-live="polite"></p>
+      </div>
+      <div class="metrics-footer">
+        <button class="secondary-button" id="metrics-default" type="button">Usar padrão</button>
+        <span></span>
+        <button class="secondary-button" id="metrics-cancel" type="button">Cancelar</button>
+        <button class="primary-button" type="submit">Salvar estratégia</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="import-dialog" id="import-dialog" aria-labelledby="import-title">
+    <form id="import-form" novalidate>
+      <div class="import-head">
+        <div>
+          <p class="overline">Atualização rápida</p>
+          <h2 id="import-title">Importar nova semana</h2>
+          <p id="import-description">Envie os relatórios do Meta e do Google. Leads, CPL e visitas serão calculados automaticamente.</p>
+        </div>
+        <button id="import-close" type="button" aria-label="Fechar importação"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+
+      <div class="import-body">
+        <div class="period-card">
+          <div class="field-group">
+            <label for="import-date">Data da reunião</label>
+            <input id="import-date" type="date" required>
+          </div>
+          <div class="field-group">
+            <label for="period-start">Início do período</label>
+            <input id="period-start" type="date" required>
+          </div>
+          <div class="field-group">
+            <label for="period-end">Fim do período</label>
+            <input id="period-end" type="date" required>
+          </div>
+        </div>
+
+        <div class="upload-grid">
+          <label class="upload-card" for="meta-csv">
+            <span class="upload-icon">M</span>
+            <span><strong>CSV do Meta Ads</strong><small id="meta-file-name">Selecionar relatório semanal</small></span>
+            <input id="meta-csv" type="file" accept=".csv,text/csv" required>
+          </label>
+          <label class="upload-card" for="google-csv" id="google-upload-card">
+            <span class="upload-icon">G</span>
+            <span><strong>CSV do Google Ads</strong><small id="google-file-name">Selecionar relatório semanal</small></span>
+            <input id="google-csv" type="file" accept=".csv,text/csv" required>
+          </label>
+        </div>
+        <p class="import-tip" id="import-tip">Exporte no nível de campanhas. Meta: campanha, tipo de resultado, resultados, valor gasto e visualizações da página de destino. Google: campanha, conversões, custo e assinantes adquiridos. Os novos inscritos do YouTube vêm automaticamente do CSV.</p>
+
+        <div class="manual-grid single-field">
+          <div class="field-group" id="followers-field">
+            <label for="new-followers-input">Novos seguidores</label>
+            <input id="new-followers-input" type="number" step="1" inputmode="numeric" placeholder="Ex.: 34" required>
+            <small>O total será calculado usando a base da semana anterior.</small>
+          </div>
+        </div>
+
+        <div class="import-feedback" id="import-feedback" aria-live="polite">
+          <strong>Pronto para receber os relatórios.</strong>
+          <span>O sistema aceita CSV em português ou inglês e ignora linhas de total para não duplicar resultados.</span>
+        </div>
+      </div>
+
+      <div class="import-footer">
+        <button class="danger-button" id="remove-imported-week" type="button" hidden>Remover semana importada</button>
+        <span></span>
+        <button class="secondary-button" id="import-cancel" type="button">Cancelar</button>
+        <button class="primary-button" type="submit">Criar semana</button>
+      </div>
+    </form>
+  </dialog>
+
+  <footer class="page-footer"><span id="footer-updated">Painel protegido</span><span id="footer-source">Dados carregados após autenticação</span></footer>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./supabase-config.js?v=20260916-1"></script>
+  <script src="./app.js?v=20260917-1"></script>
+  <script src="./supabase-app.js?v=20260917-1"></script>
+</body>
+</html>

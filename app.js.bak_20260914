@@ -1,0 +1,81 @@
+const weeks = {
+  current: {
+    title: "Atenção no Google. <span>Meta evoluiu.</span>",
+    status: "Atenção",
+    statusCopy: "O CPL do Google subiu 35,8% enquanto os formulários caíram 10%. No Meta, o CPL registrado caiu 33,3%.",
+    meta: { cpl: "R$ 14,20", cplDelta: "33,3%", visits: "255", visitsDelta: "10,4%", followers: "4.016", followersDelta: "1,7%", newFollowers: "68", newFollowersDelta: "353,3%" },
+    google: { leads: "45", leadsDelta: "10,0%", cpl: "R$ 26,03", cplDelta: "35,8%", spend: "R$ 1.171,55", spendDelta: "22,2%", insight: "R$ 213,06 a mais para gerar 5 formulários a menos." }
+  },
+  previous: {
+    title: "Semana-base. <span>Google mais eficiente.</span>",
+    status: "Referência",
+    statusCopy: "Período usado como base de comparação. O Google gerou 50 formulários com CPL de R$ 19,17.",
+    meta: { cpl: "R$ 21,29", cplDelta: "base", visits: "231", visitsDelta: "base", followers: "3.948", followersDelta: "base", newFollowers: "15", newFollowersDelta: "base" },
+    google: { leads: "50", leadsDelta: "base", cpl: "R$ 19,17", cplDelta: "base", spend: "R$ 958,49", spendDelta: "base", insight: "Esta é a semana-base usada nas comparações do período seguinte." }
+  }
+};
+
+const byId = id => document.getElementById(id);
+
+function setDelta(id, value) {
+  const element = byId(id);
+  const svg = element.querySelector("svg");
+  element.replaceChildren(svg, document.createTextNode(value));
+}
+
+function renderWeek(key) {
+  const data = weeks[key];
+  byId("status-title").innerHTML = data.title;
+  byId("status-copy").textContent = data.statusCopy;
+  byId("status-pill").textContent = data.status;
+
+  byId("meta-cpl").textContent = data.meta.cpl;
+  byId("meta-visits").textContent = data.meta.visits;
+  byId("followers").textContent = data.meta.followers;
+  byId("new-followers").textContent = data.meta.newFollowers;
+  setDelta("meta-cpl-delta", data.meta.cplDelta);
+  setDelta("meta-visits-delta", data.meta.visitsDelta);
+  setDelta("followers-delta", data.meta.followersDelta);
+  setDelta("new-followers-delta", data.meta.newFollowersDelta);
+
+  byId("google-leads").textContent = data.google.leads;
+  byId("google-cpl").textContent = data.google.cpl;
+  byId("google-spend").textContent = data.google.spend;
+  setDelta("google-leads-delta", data.google.leadsDelta);
+  setDelta("google-cpl-delta", data.google.cplDelta);
+  setDelta("google-spend-delta", data.google.spendDelta);
+  byId("google-insight").textContent = data.google.insight;
+}
+
+byId("week-select").addEventListener("change", event => renderWeek(event.target.value));
+
+const actionList = byId("action-list");
+const pendingCount = byId("pending-count");
+
+function updatePendingCount() {
+  const total = actionList.querySelectorAll("input[type='checkbox']").length;
+  const completed = actionList.querySelectorAll("input[type='checkbox']:checked").length;
+  const pending = total - completed;
+  pendingCount.textContent = `${pending} ${pending === 1 ? "pendente" : "pendentes"}`;
+}
+
+actionList.addEventListener("change", updatePendingCount);
+
+byId("quick-action-form").addEventListener("submit", event => {
+  event.preventDefault();
+  const input = byId("quick-action");
+  const title = input.value.trim();
+  if (!title) return input.focus();
+
+  const label = document.createElement("label");
+  label.className = "action-item";
+  label.innerHTML = '<input type="checkbox"><span class="check-box" aria-hidden="true"></span><span><strong></strong><small>Adicionada nesta reunião</small></span>';
+  label.querySelector("strong").textContent = title;
+  actionList.append(label);
+  input.value = "";
+  updatePendingCount();
+});
+
+const quickNotes = byId("quick-notes");
+quickNotes.value = localStorage.getItem("4medic-v2-quick-notes") || "";
+quickNotes.addEventListener("input", () => localStorage.setItem("4medic-v2-quick-notes", quickNotes.value));

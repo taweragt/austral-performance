@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Resumo semanal de performance da conta 4Medic para reuniões rápidas.">
+  <title>4Medic | Resumo rápido da conta</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#resumo">Ir para o resumo</a>
+
+  <header class="topbar">
+    <a class="brand" href="#resumo" aria-label="4Medic — início">
+      <span class="brand-mark">4</span>
+      <span><strong>4Medic</strong><small>Reunião de performance</small></span>
+    </a>
+
+    <div class="filters" aria-label="Filtros do acompanhamento">
+      <label>
+        <span>Cliente</span>
+        <select aria-label="Selecionar cliente">
+          <option>4Medic</option>
+        </select>
+      </label>
+      <label>
+        <span>Semana</span>
+        <select id="week-select" aria-label="Selecionar semana">
+          <option value="current">07–13 set. 2026</option>
+          <option value="previous">31 ago.–06 set. 2026</option>
+        </select>
+      </label>
+    </div>
+  </header>
+
+  <main id="resumo" class="meeting-sheet">
+    <section class="account-status" aria-labelledby="status-title">
+      <div class="status-signal" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div>
+        <p class="overline">Situação da conta</p>
+        <h1 id="status-title">Atenção no Google. <span>Meta evoluiu.</span></h1>
+      </div>
+      <p id="status-copy">O CPL do Google subiu 35,8% enquanto os formulários caíram 10%. No Meta, o CPL registrado caiu 33,3%.</p>
+      <span class="status-pill" id="status-pill">Atenção</span>
+    </section>
+
+    <div class="overview-grid">
+      <div class="work-column">
+        <section class="platforms" aria-label="Resumo das plataformas">
+          <article class="platform-card meta-card">
+            <header>
+              <div class="platform-name"><span class="platform-icon">M</span><div><p>Meta e Instagram</p><small>Registro manual</small></div></div>
+              <span class="platform-health good">Melhorou</span>
+            </header>
+            <div class="metric-list">
+              <div class="metric-row">
+                <span>CPL Meta</span>
+                <strong id="meta-cpl">R$ 14,20</strong>
+                <em id="meta-cpl-delta" class="delta good"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg>33,3%</em>
+              </div>
+              <div class="metric-row">
+                <span>Visitas à página</span>
+                <strong id="meta-visits">255</strong>
+                <em id="meta-visits-delta" class="delta good"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 10l4-4 4 4"/></svg>10,4%</em>
+              </div>
+              <div class="metric-row">
+                <span>Seguidores</span>
+                <strong id="followers">4.016</strong>
+                <em id="followers-delta" class="delta good"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 10l4-4 4 4"/></svg>1,7%</em>
+              </div>
+              <div class="metric-row emphasis">
+                <span>Novos seguidores</span>
+                <strong id="new-followers">68</strong>
+                <em id="new-followers-delta" class="delta good"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 10l4-4 4 4"/></svg>353,3%</em>
+              </div>
+            </div>
+          </article>
+
+          <article class="platform-card google-card">
+            <header>
+              <div class="platform-name"><span class="platform-icon">G</span><div><p>Google Ads</p><small>Dados confirmados</small></div></div>
+              <span class="platform-health bad">Piorou</span>
+            </header>
+            <div class="metric-list">
+              <div class="metric-row emphasis">
+                <span>Formulários</span>
+                <strong id="google-leads">45</strong>
+                <em id="google-leads-delta" class="delta bad"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg>10,0%</em>
+              </div>
+              <div class="metric-row">
+                <span>Custo por lead</span>
+                <strong id="google-cpl">R$ 26,03</strong>
+                <em id="google-cpl-delta" class="delta bad"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 10l4-4 4 4"/></svg>35,8%</em>
+              </div>
+              <div class="metric-row">
+                <span>Investimento</span>
+                <strong id="google-spend">R$ 1.171,55</strong>
+                <em id="google-spend-delta" class="delta neutral"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 10l4-4 4 4"/></svg>22,2%</em>
+              </div>
+            </div>
+            <p class="plain-insight" id="google-insight">R$ 213,06 a mais para gerar 5 formulários a menos.</p>
+          </article>
+        </section>
+
+        <section class="meeting-notes" aria-labelledby="actions-title">
+          <div class="actions-block">
+            <div class="section-title">
+              <div><p class="overline">Saída da reunião</p><h2 id="actions-title">Próximas ações</h2></div>
+              <span id="pending-count">3 pendentes</span>
+            </div>
+            <div id="action-list" class="action-list">
+              <label class="action-item"><input type="checkbox"><span class="check-box" aria-hidden="true"></span><span><strong>Revisar termos de pesquisa</strong><small>Prazo: 18 set.</small></span></label>
+              <label class="action-item"><input type="checkbox"><span class="check-box" aria-hidden="true"></span><span><strong>Validar qualidade dos formulários</strong><small>Responsável: Comercial</small></span></label>
+              <label class="action-item"><input type="checkbox"><span class="check-box" aria-hidden="true"></span><span><strong>Trocar criativos do Meta</strong><small>Prazo a definir</small></span></label>
+            </div>
+            <form id="quick-action-form" class="quick-action-form">
+              <label class="sr-only" for="quick-action">Nova ação</label>
+              <input id="quick-action" type="text" placeholder="Adicionar uma ação rápida" autocomplete="off">
+              <button type="submit" aria-label="Adicionar ação"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+            </form>
+          </div>
+
+          <div class="notes-block">
+            <div class="section-title"><div><p class="overline">Durante a reunião</p><h2>Anotação rápida</h2></div></div>
+            <label class="sr-only" for="quick-notes">Anotação rápida da reunião</label>
+            <textarea id="quick-notes" placeholder="Hipótese, decisão ou contexto..."></textarea>
+            <small>Salvo automaticamente neste navegador.</small>
+          </div>
+        </section>
+      </div>
+
+      <aside class="ad-week" aria-labelledby="ad-title">
+        <div class="ad-heading">
+          <div><p class="overline">Anúncio da semana</p><h2 id="ad-title">Peça associada</h2></div>
+          <div class="ad-actions">
+            <button id="edit-ad-link" type="button" aria-label="Editar link do anúncio" title="Editar link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L8 18l-4 1 1-4z"/></svg></button>
+            <a id="ad-open" href="https://www.instagram.com/p/Dc3CrOSj3Qd/" target="_blank" rel="noopener noreferrer" aria-label="Abrir anúncio no Instagram" title="Abrir anúncio"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 16L16 8M9 8h7v7"/></svg></a>
+          </div>
+        </div>
+        <a class="ad-preview" id="ad-preview-link" href="https://www.instagram.com/p/Dc3CrOSj3Qd/" target="_blank" rel="noopener noreferrer" aria-label="Abrir prévia ilustrativa do anúncio da semana no Instagram">
+          <span>4MEDIC</span>
+          <strong>Mais tempo para<br>cuidar.<br><em>Menos tempo<br>administrando.</em></strong>
+          <div class="ad-lines"><i></i><i></i><i></i></div>
+          <small>Prévia ilustrativa</small>
+        </a>
+        <dl class="ad-meta">
+          <div><dt>Campanha</dt><dd>Captação de leads</dd></div>
+          <div><dt>Plataforma</dt><dd>Meta Ads</dd></div>
+          <div><dt>Status</dt><dd><span></span> Ativo</dd></div>
+        </dl>
+        <div class="creative-link">
+          <span>Link do criativo</span>
+          <a id="ad-url-display" href="https://www.instagram.com/p/Dc3CrOSj3Qd/" target="_blank" rel="noopener noreferrer">instagram.com/p/Dc3CrOSj3Qd</a>
+        </div>
+        <form class="ad-link-form" id="ad-link-form" hidden novalidate>
+          <label for="ad-link-input">Cole o link do criativo desta semana</label>
+          <div><input id="ad-link-input" type="url" inputmode="url" autocomplete="url" placeholder="https://www.instagram.com/p/..."><button type="submit">Salvar</button></div>
+          <small id="ad-link-feedback" aria-live="polite"></small>
+        </form>
+        <p>A miniatura automática poderá ser conectada em uma próxima etapa.</p>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="page-footer"><span>Atualizado em 14 set. 2026</span><span>Google confirmado · Meta manual</span></footer>
+  <script src="./app.js"></script>
+</body>
+</html>

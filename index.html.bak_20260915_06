@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Resumo semanal de performance da conta 4Medic para reuniões rápidas.">
+  <title>4Medic | Resumo rápido da conta</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#resumo">Ir para o resumo</a>
+
+  <header class="topbar">
+    <a class="brand" href="#resumo" aria-label="4Medic — início">
+      <span class="brand-mark"><img src="./logo-4medic-square.jpg" alt="Símbolo 4M"></span>
+      <span class="brand-copy"><strong>4Medic</strong><small>Reunião de performance</small></span>
+    </a>
+
+    <div class="filters" aria-label="Filtros do acompanhamento">
+      <div class="budget-strip" aria-label="Orçamento mensal"><span>Meta <strong>R$ 2 mil</strong></span><span>Google <strong>R$ 4,5 mil</strong></span></div>
+      <label>
+        <span>Cliente</span>
+        <select aria-label="Selecionar cliente">
+          <option>4Medic</option>
+        </select>
+      </label>
+      <label>
+        <span>Semana</span>
+        <select id="week-select" aria-label="Selecionar semana">
+          <option value="2026-09-07">07/09/2026</option>
+          <option value="2026-08-31">31/08/2026</option>
+          <option value="2026-08-24">24/08/2026</option>
+          <option value="2026-08-17">17/08/2026</option>
+          <option value="2026-08-10">10/08/2026</option>
+          <option value="2026-08-03">03/08/2026</option>
+        </select>
+      </label>
+      <button class="history-trigger" id="history-open" type="button">Ver histórico</button>
+      <button class="import-trigger" id="import-open" type="button">Importar semana</button>
+    </div>
+  </header>
+
+  <main id="resumo" class="meeting-sheet">
+    <section class="account-status" aria-labelledby="status-title">
+      <div class="status-signal" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div>
+        <p class="overline">Situação da conta</p>
+        <h1 id="status-title">Atenção no Google. <span>Meta evoluiu.</span></h1>
+      </div>
+      <p id="status-copy">O CPL do Google subiu 35,8% enquanto os formulários caíram 10%. No Meta, o CPL registrado caiu 33,3%.</p>
+      <span class="status-pill" id="status-pill">Atenção</span>
+    </section>
+
+    <div class="overview-grid">
+      <div class="work-column">
+        <section class="platforms" aria-label="Resumo das plataformas">
+          <article class="platform-card meta-card">
+            <header>
+              <div class="platform-name"><span class="platform-icon">M</span><div><p>Meta e Instagram</p><small>Registro manual</small></div></div>
+              <span class="platform-health good">Melhorou</span>
+            </header>
+            <div class="metric-list">
+              <div class="metric-row emphasis">
+                <span>Leads</span>
+                <strong id="meta-leads">15</strong>
+                <em id="meta-leads-delta" class="delta good"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 10l4-4 4 4"/></svg>50,0%</em>
+              </div>
+              <div class="metric-row">
+                <span>CPL Meta</span>
+                <strong id="meta-cpl">R$ 14,20</strong>
+                <em id="meta-cpl-delta" class="delta good"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg>33,3%</em>
+              </div>
+              <div class="metric-row">
+                <span>Visitas à página</span>
+                <strong id="meta-visits">255</strong>
+                <em id="meta-visits-delta" class="delta good"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 10l4-4 4 4"/></svg>10,4%</em>
+              </div>
+              <div class="metric-row">
+                <span>Seguidores</span>
+                <strong id="followers">4.016</strong>
+                <em id="followers-delta" class="delta good"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 10l4-4 4 4"/></svg>1,7%</em>
+              </div>
+              <div class="metric-row">
+                <span>Novos seguidores</span>
+                <strong id="new-followers">68</strong>
+                <em id="new-followers-delta" class="delta trend-only good" aria-label="Aumentou em relação à semana anterior" title="Aumentou em relação à semana anterior"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 10l4-4 4 4"/></svg></em>
+              </div>
+            </div>
+          </article>
+
+          <article class="platform-card google-card">
+            <header>
+              <div class="platform-name"><span class="platform-icon">G</span><div><p>Google Ads</p><small>Dados confirmados</small></div></div>
+              <span class="platform-health bad">Piorou</span>
+            </header>
+            <div class="metric-list">
+              <div class="metric-row emphasis">
+                <span>Leads</span>
+                <strong id="google-leads">49</strong>
+                <em id="google-leads-delta" class="delta bad"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg>7,5%</em>
+              </div>
+              <div class="metric-row">
+                <span>Custo por lead</span>
+                <strong id="google-cpl">R$ 19,36</strong>
+                <em id="google-cpl-delta" class="delta bad"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 10l4-4 4 4"/></svg>7,6%</em>
+              </div>
+              <div class="metric-row">
+                <span>Inscritos</span>
+                <strong id="google-subscribers">2.390</strong>
+                <em id="google-subscribers-delta" class="delta neutral"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10"/></svg>0,0%</em>
+              </div>
+              <div class="metric-row">
+                <span>Novos inscritos</span>
+                <strong id="google-new-subscribers">382</strong>
+                <em id="google-new-subscribers-delta" class="delta neutral"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10"/></svg>0,0%</em>
+              </div>
+            </div>
+            <p class="plain-insight" id="google-insight">4 leads a menos e CPL 7,6% maior que na semana anterior.</p>
+          </article>
+        </section>
+
+        <section class="meeting-notes" aria-labelledby="actions-title">
+          <div class="actions-block">
+            <div class="section-title">
+              <div><p class="overline">Saída da reunião</p><h2 id="actions-title">Próximas ações</h2></div>
+              <span id="pending-count">3 pendentes</span>
+            </div>
+            <div id="action-list" class="action-list">
+              <label class="action-item"><input type="checkbox"><span class="check-box" aria-hidden="true"></span><span><strong>Revisar termos de pesquisa</strong><small>Prazo: 18 set.</small></span></label>
+              <label class="action-item"><input type="checkbox"><span class="check-box" aria-hidden="true"></span><span><strong>Validar qualidade dos formulários</strong><small>Responsável: Comercial</small></span></label>
+              <label class="action-item"><input type="checkbox"><span class="check-box" aria-hidden="true"></span><span><strong>Trocar criativos do Meta</strong><small>Prazo a definir</small></span></label>
+            </div>
+            <form id="quick-action-form" class="quick-action-form">
+              <label class="sr-only" for="quick-action">Nova ação</label>
+              <input id="quick-action" type="text" placeholder="Adicionar uma ação rápida" autocomplete="off">
+              <button type="submit" aria-label="Adicionar ação"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+            </form>
+          </div>
+
+          <div class="notes-block">
+            <div class="section-title"><div><p class="overline">Durante a reunião</p><h2>Anotação rápida</h2></div></div>
+            <label class="sr-only" for="quick-notes">Anotação rápida da reunião</label>
+            <textarea id="quick-notes" placeholder="Hipótese, decisão ou contexto..."></textarea>
+            <small>Salvo automaticamente neste navegador.</small>
+          </div>
+        </section>
+      </div>
+
+      <aside class="ad-week" aria-labelledby="ad-title">
+        <div class="ad-heading">
+          <div><p class="overline">Anúncio da semana</p><h2 id="ad-title">Peça associada</h2></div>
+          <div class="ad-actions">
+            <button id="edit-ad-link" type="button" aria-label="Editar link do anúncio" title="Editar link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L8 18l-4 1 1-4z"/></svg></button>
+            <label class="icon-control" for="creative-upload" aria-label="Enviar print do criativo" title="Enviar print"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 13l2.5-2.5L14 14l2-2 4 4M8.5 9h.01"/></svg><input id="creative-upload" type="file" accept="image/png,image/jpeg,image/webp"></label>
+            <button id="clear-creative-image" type="button" aria-label="Remover print e voltar ao post do Instagram" title="Usar post do Instagram" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-8 0l1 13h8l1-13M10 11v5m4-5v5"/></svg></button>
+            <a id="ad-open" href="https://www.instagram.com/p/Dc3CrOSj3Qd/" target="_blank" rel="noopener noreferrer" aria-label="Abrir anúncio no Instagram" title="Abrir anúncio"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 16L16 8M9 8h7v7"/></svg></a>
+          </div>
+        </div>
+        <div class="creative-stage" id="creative-stage">
+          <iframe class="instagram-frame" id="instagram-frame" title="Publicação do Instagram associada à semana" loading="eager" allowtransparency="true"></iframe>
+          <img class="manual-creative" id="manual-creative" alt="Print do criativo da semana" hidden>
+          <a class="ad-preview" id="ad-preview-link" href="https://www.instagram.com/p/Dc3CrOSj3Qd/" target="_blank" rel="noopener noreferrer" aria-label="Abrir prévia ilustrativa do anúncio da semana no Instagram" hidden>
+            <span>4MEDIC</span>
+            <strong>Mais tempo para<br>cuidar.<br><em>Menos tempo<br>administrando.</em></strong>
+            <div class="ad-lines"><i></i><i></i><i></i></div>
+            <small>Prévia indisponível</small>
+          </a>
+        </div>
+        <p class="creative-status" id="creative-status" aria-live="polite">Carregando publicação do Instagram...</p>
+        <div class="creative-link">
+          <span>Link do criativo</span>
+          <a id="ad-url-display" href="https://www.instagram.com/p/Dc3CrOSj3Qd/" target="_blank" rel="noopener noreferrer">instagram.com/p/Dc3CrOSj3Qd</a>
+        </div>
+        <form class="ad-link-form" id="ad-link-form" hidden novalidate>
+          <label for="ad-link-input">Cole o link do criativo desta semana</label>
+          <div><input id="ad-link-input" type="url" inputmode="url" autocomplete="url" placeholder="https://www.instagram.com/p/..."><button type="submit">Salvar</button></div>
+          <small id="ad-link-feedback" aria-live="polite"></small>
+        </form>
+        <p>Se a publicação não aparecer, use o botão de imagem para enviar um print.</p>
+      </aside>
+    </div>
+  </main>
+
+  <dialog class="history-dialog" id="history-dialog" aria-labelledby="history-title">
+    <div class="history-head">
+      <div><p class="overline">Seis registros</p><h2 id="history-title">Histórico da conta</h2><p>As variações da tela sempre usam a linha imediatamente anterior como referência.</p></div>
+      <button id="history-close" type="button" aria-label="Fechar histórico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="history-summary" id="history-summary"></div>
+    <div class="history-table-wrap">
+      <table class="history-table">
+        <thead><tr><th>Data</th><th>Meta leads</th><th>CPL Meta</th><th>Visitas</th><th>Seguidores</th><th>Google leads</th><th>CPL Google</th></tr></thead>
+        <tbody id="history-body"></tbody>
+      </table>
+    </div>
+    <p class="history-note">Atenção: “2.390 inscritos” e “382 novos inscritos” aparecem repetidos em 31/08 e 07/09. Validar no gerenciador.</p>
+  </dialog>
+
+  <dialog class="import-dialog" id="import-dialog" aria-labelledby="import-title">
+    <form id="import-form" novalidate>
+      <div class="import-head">
+        <div>
+          <p class="overline">Atualização rápida</p>
+          <h2 id="import-title">Importar nova semana</h2>
+          <p>Envie os relatórios do Meta e do Google. Leads, CPL e visitas serão calculados automaticamente.</p>
+        </div>
+        <button id="import-close" type="button" aria-label="Fechar importação"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+
+      <div class="import-body">
+        <div class="period-card">
+          <div class="field-group">
+            <label for="import-date">Data da reunião</label>
+            <input id="import-date" type="date" required>
+          </div>
+          <div class="field-group">
+            <label for="period-start">Início do período</label>
+            <input id="period-start" type="date" required>
+          </div>
+          <div class="field-group">
+            <label for="period-end">Fim do período</label>
+            <input id="period-end" type="date" required>
+          </div>
+        </div>
+
+        <div class="upload-grid">
+          <label class="upload-card" for="meta-csv">
+            <span class="upload-icon">M</span>
+            <span><strong>CSV do Meta Ads</strong><small id="meta-file-name">Selecionar relatório semanal</small></span>
+            <input id="meta-csv" type="file" accept=".csv,text/csv" required>
+          </label>
+          <label class="upload-card" for="google-csv">
+            <span class="upload-icon">G</span>
+            <span><strong>CSV do Google Ads</strong><small id="google-file-name">Selecionar relatório semanal</small></span>
+            <input id="google-csv" type="file" accept=".csv,text/csv" required>
+          </label>
+        </div>
+        <p class="import-tip">Exporte no nível de campanhas. Meta: campanha, tipo de resultado, resultados, valor gasto e visualizações da página de destino. Google: campanha, conversões e custo.</p>
+
+        <div class="manual-grid single-field">
+          <div class="field-group">
+            <label for="new-followers-input">Novos seguidores</label>
+            <input id="new-followers-input" type="number" min="0" step="1" inputmode="numeric" placeholder="Ex.: 34" required>
+            <small>O total será calculado usando a base da semana anterior.</small>
+          </div>
+        </div>
+
+        <div class="import-feedback" id="import-feedback" aria-live="polite">
+          <strong>Pronto para receber os relatórios.</strong>
+          <span>O sistema aceita CSV em português ou inglês e ignora linhas de total para não duplicar resultados.</span>
+        </div>
+      </div>
+
+      <div class="import-footer">
+        <button class="danger-button" id="remove-imported-week" type="button" hidden>Remover semana importada</button>
+        <span></span>
+        <button class="secondary-button" id="import-cancel" type="button">Cancelar</button>
+        <button class="primary-button" type="submit">Criar semana</button>
+      </div>
+    </form>
+  </dialog>
+
+  <footer class="page-footer"><span id="footer-updated">Atualizado em 14 set. 2026</span><span id="footer-source">Google confirmado · Meta manual</span></footer>
+  <script src="./app.js?v=20260915-4"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+*.bak_*
+supabase/
+serve_preview.mjs
+INDEX.md
+PROJETO_STATUS.md
+

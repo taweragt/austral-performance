@@ -1,0 +1,224 @@
+const baseWeeks = [
+  { key:"2026-08-03", date:"03/08/2026", meta:{leads:7,cpl:31.47,visits:213,followers:3910,newFollowers:15}, google:{leads:10,cpl:45.20,subscribers:1258,newSubscribers:496}, actions:[ ["Impulsionar","Meta · prazo: 14/08"], ["Negativar termos de pesquisa","Google · prazo: 31/07"] ] },
+  { key:"2026-08-10", date:"10/08/2026", meta:{leads:6,cpl:33.47,visits:204,followers:3910,newFollowers:3}, google:{leads:19,cpl:49.20,subscribers:1970,newSubscribers:712}, actions:[ ["Impulsionar","Meta · prazo: 14/08"], ["Testar novo conjunto e novas peças","Meta"], ["Conversão de LP ou remarketing de WhatsApp","Meta"], ["Negativar termos de pesquisa","Google · prazo: 14/08"], ["Trocar vídeos da campanha de seguidor","Google"], ["Aumentar gradualmente a verba de Search","Google"] ] },
+  { key:"2026-08-17", date:"17/08/2026", meta:{leads:11,cpl:18.47,visits:202,followers:3924,newFollowers:10}, google:{leads:21,cpl:35.10,subscribers:1970,newSubscribers:612}, actions:[ ["Impulsionar","Meta · prazo: 21/08"], ["Testar novo conjunto e novas peças","Meta"], ["Conversão de LP ou remarketing de WhatsApp","Meta"], ["Negativar termos de pesquisa","Google · prazo: 20/08"], ["Fazer diagnóstico da conta","Google"], ["Aumentar gradualmente a verba de Search","Google"] ], note:"Dia da otimização de saldo: média registrada de 59,34 leads a R$ 42,27." },
+  { key:"2026-08-24", date:"24/08/2026", meta:{leads:8,cpl:23.74,visits:215,followers:3933,newFollowers:9}, google:{leads:41,cpl:24.10,subscribers:2008,newSubscribers:38}, actions:[ ["Impulsionar","Meta · prazo: 28/08"], ["Testar novo conjunto e novas peças","Meta"], ["Conversão de LP ou remarketing de WhatsApp","Meta"], ["Negativar termos de pesquisa","Google · prazo: 26/08"], ["Subir novo vídeo no YouTube","Google · prazo: 26/08"] ] },
+  { key:"2026-08-31", date:"31/08/2026", meta:{leads:10,cpl:21.29,visits:231,followers:3948,newFollowers:15}, google:{leads:53,cpl:17.99,subscribers:2390,newSubscribers:382}, actions:[ ["Impulsionar","Meta · prazo: 31/08"], ["Conversão de LP ou remarketing de WhatsApp","Meta"], ["Subir novo vídeo no YouTube","Google · prazo: 04/09"] ] },
+  { key:"2026-09-07", date:"07/09/2026", meta:{leads:15,cpl:14.20,visits:255,followers:4016,newFollowers:68}, google:{leads:49,cpl:19.36,subscribers:2390,newSubscribers:382}, actions:[ ["Impulsionar","Meta · prazo: 11/09"], ["Trocar peças da campanha de tráfego","Meta"], ["Conversão de LP ou remarketing de WhatsApp","Meta · faltam novas peças"], ["Subir novo vídeo no YouTube","Google · prazo: 10/09"] ] }
+];
+
+const importedWeeksStorageKey = "4medic-v2-imported-weeks";
+function loadImportedWeeks() {
+  try {
+    const value = JSON.parse(localStorage.getItem(importedWeeksStorageKey) || "[]");
+    if (!Array.isArray(value)) return [];
+    const clean = value.filter(item => !item.testOnly && !(item.key === "2026-09-15" && item.meta?.leads === 12 && item.meta?.cpl === 15 && item.meta?.followers === 4050 && [30,45].includes(item.google?.leads) && item.google?.cpl === 20));
+    if (clean.length !== value.length) localStorage.setItem(importedWeeksStorageKey,JSON.stringify(clean));
+    return clean;
+  }
+  catch { return []; }
+}
+let weeks = [...baseWeeks, ...loadImportedWeeks()].reduce((result,item) => {
+  const existing = result.findIndex(entry => entry.key === item.key);
+  if (existing >= 0) result[existing] = item; else result.push(item);
+  return result;
+}, []).sort((a,b) => a.key.localeCompare(b.key));
+
+const byId = id => document.getElementById(id);
+const money = value => Number.isFinite(value) ? value.toLocaleString("pt-BR", {style:"currency",currency:"BRL"}) : "—";
+const integer = value => Number.isFinite(value) ? value.toLocaleString("pt-BR") : "—";
+const defaultAdLinks = {"2026-09-07":"https://www.instagram.com/p/Dc3CrOSj3Qd/"};
+let selectedWeek = weeks.at(-1)?.key || "2026-09-07";
+
+function populateWeekSelect() {
+  const select = byId("week-select");
+  select.replaceChildren(...weeks.slice().reverse().map(item => {
+    const option = document.createElement("option"); option.value = item.key; option.textContent = item.period ? `${item.date} · ${item.period.start.slice(0,5)}–${item.period.end.slice(0,5)}` : item.date; return option;
+  }));
+  select.value = selectedWeek;
+}
+
+function variation(current, previous) { return !Number.isFinite(current) || !Number.isFinite(previous) || previous === 0 ? null : ((current - previous) / previous) * 100; }
+function formatVariation(value) { return value === null ? "sem comparação" : `${Math.abs(value).toLocaleString("pt-BR", {minimumFractionDigits:1,maximumFractionDigits:1})}%`; }
+function direction(value) { return value === null ? "sem comparação" : value > 0 ? `subiu ${formatVariation(value)}` : value < 0 ? `caiu ${formatVariation(value)}` : "ficou estável"; }
+function setDelta(id, value, lowerIsBetter = false) {
+  const element = byId(id), svg = element.querySelector("svg");
+  element.replaceChildren(svg, document.createTextNode(formatVariation(value)));
+  element.className = "delta neutral";
+  if (value === null || value === 0) { svg.innerHTML = '<path d="M3 8h10"/>'; return; }
+  element.className = `delta ${(lowerIsBetter ? value < 0 : value > 0) ? "good" : "bad"}`;
+  svg.innerHTML = value > 0 ? '<path d="M4 10l4-4 4 4"/>' : '<path d="M4 6l4 4 4-4"/>';
+}
+function setTrend(id, value) {
+  const element = byId(id), svg = element.querySelector("svg");
+  element.replaceChildren(svg);
+  element.className = "delta trend-only neutral";
+  let label = "Sem comparação com a semana anterior";
+  if (value > 0) { element.className = "delta trend-only good"; svg.innerHTML = '<path d="M4 10l4-4 4 4"/>'; label = "Aumentou em relação à semana anterior"; }
+  else if (value < 0) { element.className = "delta trend-only bad"; svg.innerHTML = '<path d="M4 6l4 4 4-4"/>'; label = "Diminuiu em relação à semana anterior"; }
+  else { svg.innerHTML = '<path d="M3 8h10"/>'; label = value === null ? "Sem comparação com a semana anterior" : "Estável em relação à semana anterior"; }
+  element.setAttribute("aria-label", label);
+  element.title = label;
+}
+function weekData(key) { const index = weeks.findIndex(item => item.key === key); return {data:weeks[index],previous:index > 0 ? weeks[index-1] : null}; }
+
+function renderActions(data) {
+  const list = byId("action-list"), saved = JSON.parse(localStorage.getItem(`4medic-v2-actions-${data.key}`) || "{}");
+  list.replaceChildren();
+  (data.actions || []).forEach((action,index) => {
+    const label = document.createElement("label"); label.className = "action-item";
+    label.innerHTML = '<input type="checkbox"><span class="check-box" aria-hidden="true"></span><span><strong></strong><small></small></span>';
+    label.querySelector("input").checked = Boolean(saved[index]); label.querySelector("strong").textContent = action[0]; label.querySelector("small").textContent = action[1]; list.append(label);
+  });
+  updatePendingCount();
+}
+
+function renderWeek(key) {
+  selectedWeek = key;
+  const {data,previous} = weekData(key), pm = previous?.meta, pg = previous?.google;
+  const ml = variation(data.meta.leads,pm?.leads), mc = variation(data.meta.cpl,pm?.cpl), gl = variation(data.google.leads,pg?.leads), gc = variation(data.google.cpl,pg?.cpl);
+  const referenced = Boolean(previous), metaGood = !referenced || (ml >= 0 && mc <= 0), googleGood = !referenced || (gl >= 0 && gc <= 0);
+  byId("status-title").innerHTML = referenced ? `${metaGood ? "Meta evoluiu." : "Meta pede atenção."} <span>${googleGood ? "Google evoluiu." : "Google pede atenção."}</span>` : "Primeiro registro. <span>Base do histórico.</span>";
+  byId("status-pill").textContent = !referenced ? "Referência" : metaGood && googleGood ? "Evolução" : metaGood || googleGood ? "Atenção" : "Revisar";
+  const periodText = data.period ? `Período ${data.period.start.slice(0,5)} a ${data.period.end.slice(0,5)}. ` : "";
+  byId("status-copy").textContent = referenced ? `${periodText}Comparação com ${previous.date}: no Meta, leads ${direction(ml)} e CPL ${direction(mc)}; no Google, leads ${direction(gl)} e CPL ${direction(gc)}.` : `${periodText}Este é o primeiro registro disponível e serve como base para a semana seguinte.`;
+  const values = {"meta-leads":integer(data.meta.leads),"meta-cpl":money(data.meta.cpl),"meta-visits":integer(data.meta.visits),followers:integer(data.meta.followers),"new-followers":integer(data.meta.newFollowers),"google-leads":integer(data.google.leads),"google-cpl":money(data.google.cpl),"google-subscribers":integer(data.google.subscribers),"google-new-subscribers":integer(data.google.newSubscribers)};
+  Object.entries(values).forEach(([id,value]) => byId(id).textContent = value);
+  setDelta("meta-leads-delta",ml); setDelta("meta-cpl-delta",mc,true); setDelta("meta-visits-delta",variation(data.meta.visits,pm?.visits)); setDelta("followers-delta",variation(data.meta.followers,pm?.followers)); setTrend("new-followers-delta",variation(data.meta.newFollowers,pm?.newFollowers));
+  setDelta("google-leads-delta",gl); setDelta("google-cpl-delta",gc,true); setDelta("google-subscribers-delta",variation(data.google.subscribers,pg?.subscribers)); setDelta("google-new-subscribers-delta",variation(data.google.newSubscribers,pg?.newSubscribers));
+  byId("google-insight").textContent = referenced && Number.isFinite(data.google.leads) && Number.isFinite(pg?.leads) ? `${Math.abs(data.google.leads-pg.leads)} leads ${data.google.leads >= pg.leads ? "a mais" : "a menos"}; CPL ${formatVariation(gc)} ${gc !== null && gc <= 0 ? "menor" : "maior"}.` : "Sem dados suficientes para esta comparação.";
+  [[".meta-card",metaGood],[".google-card",googleGood]].forEach(([selector,good]) => { const badge = document.querySelector(`${selector} .platform-health`); badge.textContent = referenced ? (good ? "Melhorou" : "Atenção") : "Base"; badge.className = `platform-health ${good ? "good" : "bad"}`; });
+  document.querySelector(".meta-card .platform-name small").textContent = data.source === "CSV" ? "Importado do CSV" : "Registro manual";
+  document.querySelector(".google-card .platform-name small").textContent = data.source === "CSV" ? "Importado do CSV" : "Dados confirmados";
+  byId("footer-updated").textContent = `Atualizado em ${data.date}`;
+  byId("footer-source").textContent = data.source === "CSV" ? "Meta e Google importados do CSV" : "Google confirmado · Meta manual";
+  renderActions(data); byId("quick-notes").value = localStorage.getItem(`4medic-v2-quick-notes-${key}`) || data.note || ""; renderAdLink();
+}
+
+populateWeekSelect();
+byId("week-select").addEventListener("change", event => renderWeek(event.target.value));
+const actionList = byId("action-list"), pendingCount = byId("pending-count");
+function updatePendingCount() { const inputs = [...actionList.querySelectorAll("input[type='checkbox']")], pending = inputs.filter(input => !input.checked).length; pendingCount.textContent = `${pending} ${pending === 1 ? "pendente" : "pendentes"}`; }
+actionList.addEventListener("change", () => { const saved = {}; [...actionList.querySelectorAll("input")].forEach((input,index) => saved[index] = input.checked); localStorage.setItem(`4medic-v2-actions-${selectedWeek}`,JSON.stringify(saved)); updatePendingCount(); });
+byId("quick-action-form").addEventListener("submit", event => { event.preventDefault(); const input = byId("quick-action"), title = input.value.trim(); if (!title) return input.focus(); weekData(selectedWeek).data.actions.push([title,"Adicionada nesta reunião"]); input.value = ""; renderActions(weekData(selectedWeek).data); });
+const quickNotes = byId("quick-notes"); quickNotes.addEventListener("input", () => localStorage.setItem(`4medic-v2-quick-notes-${selectedWeek}`,quickNotes.value));
+
+const adLinkForm=byId("ad-link-form"),adLinkInput=byId("ad-link-input"),adLinkFeedback=byId("ad-link-feedback"),adOpen=byId("ad-open"),adPreviewLink=byId("ad-preview-link"),adUrlDisplay=byId("ad-url-display"),instagramFrame=byId("instagram-frame"),manualCreative=byId("manual-creative"),creativeUpload=byId("creative-upload"),clearCreativeImage=byId("clear-creative-image"),creativeStatus=byId("creative-status");
+const adStorageKey=()=>`4medic-v2-ad-link-${selectedWeek}`,creativeStorageKey=()=>`4medic-v2-creative-image-${selectedWeek}`;
+function getAdLink(){const stored=localStorage.getItem(adStorageKey());if(stored!==null)return stored;if(selectedWeek==="2026-09-07")return localStorage.getItem("4medic-v2-ad-link-current")||defaultAdLinks[selectedWeek];return defaultAdLinks[selectedWeek]||"";}
+function shortUrl(url){if(!url)return "Nenhum link adicionado";const parsed=new URL(url);return `${parsed.hostname.replace(/^www\./,"")}${parsed.pathname}`.replace(/\/$/,"");}
+function instagramEmbedUrl(url){if(!url)return "";try{const parsed=new URL(url);if(!/(^|\.)instagram\.com$/i.test(parsed.hostname))return "";const match=parsed.pathname.match(/^\/(p|reel|tv)\/([^/]+)/i);return match?`https://www.instagram.com/${match[1]}/${match[2]}/embed/`:"";}catch{return "";}}
+function renderCreative(){const legacy=selectedWeek==="2026-09-07"?localStorage.getItem("4medic-v2-creative-image-current"):"",manualImage=localStorage.getItem(creativeStorageKey())||legacy||"",url=getAdLink(),embedUrl=instagramEmbedUrl(url);manualCreative.hidden=!manualImage;instagramFrame.hidden=Boolean(manualImage)||!embedUrl;adPreviewLink.hidden=Boolean(manualImage)||Boolean(embedUrl);clearCreativeImage.hidden=!manualImage;if(manualImage){manualCreative.src=manualImage;creativeStatus.textContent="Print salvo para esta semana.";creativeStatus.classList.add("success");return;}manualCreative.removeAttribute("src");creativeStatus.classList.remove("success");if(embedUrl){if(instagramFrame.src!==embedUrl)instagramFrame.src=embedUrl;creativeStatus.textContent="Carregando publicação do Instagram...";}else{instagramFrame.removeAttribute("src");creativeStatus.textContent=url?"Este link não oferece prévia do Instagram.":"Adicione um link ou envie um print.";}}
+function renderAdLink(){const url=getAdLink();[adOpen,adPreviewLink,adUrlDisplay].forEach(element=>{element.setAttribute("aria-disabled",String(!url));if(url)element.href=url;else element.removeAttribute("href");});adUrlDisplay.textContent=shortUrl(url);adLinkInput.value=url;adLinkFeedback.textContent="";adLinkFeedback.classList.remove("success");adLinkForm.hidden=true;renderCreative();}
+byId("edit-ad-link").addEventListener("click",()=>{adLinkForm.hidden=!adLinkForm.hidden;adLinkFeedback.textContent="";if(!adLinkForm.hidden){adLinkInput.value=getAdLink();adLinkInput.focus();adLinkInput.select();}});
+adLinkForm.addEventListener("submit",event=>{event.preventDefault();const value=adLinkInput.value.trim();if(!value){adLinkFeedback.textContent="Cole um link antes de salvar.";return adLinkInput.focus();}try{const parsed=new URL(value);if(!["http:","https:"].includes(parsed.protocol))throw new Error();localStorage.setItem(adStorageKey(),parsed.href);renderAdLink();adLinkForm.hidden=false;adLinkFeedback.textContent="Link salvo para esta semana.";adLinkFeedback.classList.add("success");}catch{adLinkFeedback.textContent="Use um link completo, começando com https://";adLinkInput.focus();}});
+instagramFrame.addEventListener("load",()=>{if(!instagramFrame.hidden){creativeStatus.textContent="Publicação carregada do Instagram.";creativeStatus.classList.add("success");}});
+creativeUpload.addEventListener("change",()=>{const file=creativeUpload.files?.[0];if(!file)return;if(!["image/png","image/jpeg","image/webp"].includes(file.type)){creativeStatus.textContent="Use uma imagem PNG, JPG ou WebP.";creativeUpload.value="";return;}if(file.size>3*1024*1024){creativeStatus.textContent="O print deve ter no máximo 3 MB.";creativeUpload.value="";return;}const reader=new FileReader();reader.addEventListener("load",()=>{try{localStorage.setItem(creativeStorageKey(),String(reader.result));renderCreative();}catch{creativeStatus.textContent="O navegador não conseguiu salvar esta imagem. Tente um arquivo menor.";}creativeUpload.value="";});reader.readAsDataURL(file);});
+clearCreativeImage.addEventListener("click",()=>{localStorage.removeItem(creativeStorageKey());if(selectedWeek==="2026-09-07")localStorage.removeItem("4medic-v2-creative-image-current");renderCreative();});
+
+const historyDialog=byId("history-dialog");
+function renderHistory(){byId("history-body").innerHTML=weeks.slice().reverse().map(item=>`<tr class="${item.key===selectedWeek?"selected":""}"><td>${item.date}</td><td>${integer(item.meta.leads)}</td><td>${money(item.meta.cpl)}</td><td>${integer(item.meta.visits)}</td><td>${integer(item.meta.followers)}</td><td>${integer(item.google.leads)}</td><td>${money(item.google.cpl)}</td></tr>`).join("");const first=weeks[0],last=weeks.at(-1);byId("history-summary").innerHTML=`<span><small>Meta leads</small><strong>${first.meta.leads} → ${last.meta.leads}</strong></span><span><small>CPL Meta</small><strong>${money(first.meta.cpl)} → ${money(last.meta.cpl)}</strong></span><span><small>Google leads</small><strong>${first.google.leads} → ${last.google.leads}</strong></span><span><small>CPL Google</small><strong>${money(first.google.cpl)} → ${money(last.google.cpl)}</strong></span>`;}
+byId("history-open").addEventListener("click",()=>{renderHistory();historyDialog.showModal();});byId("history-close").addEventListener("click",()=>historyDialog.close());historyDialog.addEventListener("click",event=>{if(event.target===historyDialog)historyDialog.close();});
+
+const importDialog=byId("import-dialog"),importForm=byId("import-form"),importFeedback=byId("import-feedback"),metaCsvInput=byId("meta-csv"),googleCsvInput=byId("google-csv"),removeImportedButton=byId("remove-imported-week");
+const aliases={
+  campaign:["nome da campanha","campanha","campaign","campaign name"],
+  campaignType:["tipo de campanha","campaign type"],
+  campaignStatus:["status da campanha","campaign status"],
+  conversionOrigin:["origem da conversao","conversion source","conversion origin"],
+  result:["resultados","resultado","results","leads","conversoes","conversions"],
+  resultType:["indicador de resultados","tipo de resultado","tipo de resultados","result indicator","result type"],
+  spend:["valor gasto brl","valor usado brl","valor gasto","valor usado","amount spent brl","amount spent","custo","cost"],
+  costResult:["custo por resultado","custo por lead","cost per result","cost per lead"],
+  visits:["visualizacoes da pagina de destino","visualizacoes da pagina","landing page views","page views"],
+  costVisit:["custo por visualizacao da pagina de destino","cost per landing page view"],
+  conversions:["conversoes","conversions","leads","todas as conv","all conv"],
+  costConversion:["custo conv","custo por conversao","cost conv","cost per conversion"],
+  subscribersGained:["assinantes adquiridos","subscribers gained"]
+};
+function normalizeHeader(value){return String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();}
+function parseLocaleNumber(value){
+  if(typeof value==="number")return value;let raw=String(value??"").replace(/\u00a0/g," ").trim();
+  if(!raw||/^(--?|n\/a|na)$/i.test(raw))return null;raw=raw.replace(/[^0-9,.-]/g,"");if(!raw)return null;
+  const comma=raw.lastIndexOf(","),dot=raw.lastIndexOf(".");
+  if(comma>=0&&dot>=0)raw=comma>dot?raw.replace(/\./g,"").replace(",","."):raw.replace(/,/g,"");
+  else if(comma>=0)raw=raw.replace(/\./g,"").replace(",",".");
+  else if((raw.match(/\./g)||[]).length>1){const parts=raw.split("."),decimal=parts.pop();raw=`${parts.join("")}.${decimal}`;}
+  const parsed=Number(raw);return Number.isFinite(parsed)?parsed:null;
+}
+function parseCsvMatrix(text){
+  const clean=String(text||"").replace(/^\uFEFF/,"").replace(/^sep=.[\r\n]+/i,"");
+  const sample=clean.split(/\r?\n/).slice(0,8).join("\n"),candidates=[";",",","\t"];
+  const delimiter=candidates.map(char=>[char,(sample.match(new RegExp(char==="\t"?"\\t":`\\${char}`,"g"))||[]).length]).sort((a,b)=>b[1]-a[1])[0][0];
+  const rows=[];let row=[],cell="",quoted=false;
+  for(let i=0;i<clean.length;i++){const char=clean[i],next=clean[i+1];if(char==='"'){if(quoted&&next==='"'){cell+='"';i++;}else quoted=!quoted;}else if(char===delimiter&&!quoted){row.push(cell);cell="";}else if((char==='\n'||char==='\r')&&!quoted){if(char==='\r'&&next==='\n')i++;row.push(cell);if(row.some(value=>String(value).trim()))rows.push(row);row=[];cell="";}else cell+=char;}
+  row.push(cell);if(row.some(value=>String(value).trim()))rows.push(row);return rows;
+}
+function csvObjects(text,platform){
+  const matrix=parseCsvMatrix(text);if(!matrix.length)throw new Error(`O CSV do ${platform} está vazio.`);
+  const relevant=platform==="Meta"?[...aliases.campaign,...aliases.result,...aliases.resultType,...aliases.spend,...aliases.costResult,...aliases.visits]:[...aliases.campaign,...aliases.campaignType,...aliases.campaignStatus,...aliases.conversionOrigin,...aliases.conversions,...aliases.spend,...aliases.costConversion,...aliases.subscribersGained];
+  let headerIndex=0,best=-1;matrix.slice(0,15).forEach((row,index)=>{const score=row.map(normalizeHeader).filter(cell=>relevant.includes(cell)).length;if(score>best){best=score;headerIndex=index;}});
+  if(best<2)throw new Error(`Não reconheci as colunas do CSV do ${platform}. Exporte com colunas de campanha, resultados/conversões e custo.`);
+  const headers=matrix[headerIndex].map(normalizeHeader);return matrix.slice(headerIndex+1).map(cells=>Object.fromEntries(headers.map((header,index)=>[header,cells[index]??""])));
+}
+function getValue(row,names){for(const name of names){if(Object.prototype.hasOwnProperty.call(row,name)&&String(row[name]).trim()!=="")return row[name];}return "";}
+function isTotalRow(row){const name=normalizeHeader(getValue(row,aliases.campaign)),status=normalizeHeader(getValue(row,aliases.campaignStatus));return /^(total|resultados de|account total|campaign total)/.test(name)||/^total\b/.test(status);}
+function aggregateMeta(text){
+  const rows=csvObjects(text,"Meta").filter(row=>!isTotalRow(row));let leads=0,visits=0,leadSpend=0,weightedCost=0,leadRows=0;let unclassified=false;
+  for(const row of rows){const result=parseLocaleNumber(getValue(row,aliases.result)),type=normalizeHeader(getValue(row,aliases.resultType)),campaign=normalizeHeader(getValue(row,aliases.campaign)),spend=parseLocaleNumber(getValue(row,aliases.spend)),costResult=parseLocaleNumber(getValue(row,aliases.costResult)),visit=parseLocaleNumber(getValue(row,aliases.visits));
+    if(Number.isFinite(visit))visits+=visit;
+    const hasType=Boolean(type),looksLead=hasType?/(lead|cadastro|convers)/.test(type):/(lead|cadastro|convers|ebook|formulario)/.test(campaign);
+    const fallbackLead=!hasType&&!campaign&&Number.isFinite(result);
+    if(looksLead||fallbackLead){if(fallbackLead)unclassified=true;if(Number.isFinite(result)){leads+=result;leadRows++;if(Number.isFinite(spend))leadSpend+=spend;if(Number.isFinite(costResult))weightedCost+=result*costResult;}}
+  }
+  if(!leadRows&&visits===0)throw new Error("No CSV do Meta, não encontrei leads nem visualizações da página de destino.");
+  const cpl=leads>0?(leadSpend>0?leadSpend/leads:weightedCost>0?weightedCost/leads:null):null;
+  return {leads,cpl,visits,warnings:unclassified?["No Meta, valide se a coluna Resultados representa leads; o arquivo não trouxe o tipo de resultado."]:[]};
+}
+function aggregateGoogle(text){
+  const rows=csvObjects(text,"Google"),detailRows=rows.filter(row=>!isTotalRow(row)),summaryRows=rows.filter(isTotalRow);let leads=0,detailCost=0,weightedCost=0,leadRows=0,detailSubscribers=0;const leadCampaigns=[],subscriberCampaigns=[],ignoredCampaigns=[];
+  const followerPattern=/(seguidor|inscrit|subscriber|youtube|video|canal)/;
+  const leadPattern=/(search|pesquisa|lead|formulario|form|cadastro|captacao|conversao)/;
+  for(const row of detailRows){
+    const campaign=String(getValue(row,aliases.campaign)||"Campanha sem nome").trim(),classification=normalizeHeader(`${campaign} ${getValue(row,aliases.campaignType)}`),conversions=parseLocaleNumber(getValue(row,aliases.conversions)),rowCost=parseLocaleNumber(getValue(row,aliases.spend)),cpc=parseLocaleNumber(getValue(row,aliases.costConversion)),subscribers=parseLocaleNumber(getValue(row,aliases.subscribersGained));
+    if(followerPattern.test(classification)){subscriberCampaigns.push(campaign);if(Number.isFinite(subscribers))detailSubscribers+=subscribers;continue;}
+    if(leadPattern.test(classification)){leadCampaigns.push(campaign);if(Number.isFinite(conversions)){leads+=conversions;leadRows++;if(Number.isFinite(rowCost))detailCost+=rowCost;if(Number.isFinite(cpc))weightedCost+=conversions*cpc;}continue;}
+    if(Number.isFinite(conversions)||Number.isFinite(rowCost))ignoredCampaigns.push(campaign);
+  }
+  if(!leadRows)throw new Error("Não encontrei campanha de leads no Google. O nome precisa indicar Search, Pesquisa, Lead, Formulário ou Cadastro.");
+  const unsegmented=row=>!normalizeHeader(getValue(row,aliases.conversionOrigin));
+  const searchSummaryCosts=summaryRows.filter(row=>unsegmented(row)&&/(search|pesquisa)/.test(normalizeHeader(`${getValue(row,aliases.campaignStatus)} ${getValue(row,aliases.campaignType)}`))).map(row=>parseLocaleNumber(getValue(row,aliases.spend))).filter(Number.isFinite);
+  const subscriberSummary=summaryRows.filter(unsegmented).map(row=>parseLocaleNumber(getValue(row,aliases.subscribersGained))).filter(Number.isFinite);
+  const cost=detailCost>0?detailCost:searchSummaryCosts.length?Math.max(...searchSummaryCosts):weightedCost;
+  const newSubscribers=detailSubscribers>0?detailSubscribers:subscriberSummary.length?Math.max(...subscriberSummary):0;
+  const warnings=[];if(ignoredCampaigns.length)warnings.push(`${ignoredCampaigns.length} campanha(s) sem classificação foram ignoradas.`);if(detailCost===0&&searchSummaryCosts.length)warnings.push("O custo de Search veio da linha consolidada Total: Pesquisa.");
+  return {leads,cost,cpl:leads>0&&cost>0?cost/leads:null,newSubscribers,leadCampaigns:[...new Set(leadCampaigns)],subscriberCampaigns:[...new Set(subscriberCampaigns)],ignoredCampaigns:[...new Set(ignoredCampaigns)],warnings};
+}
+function inputDate(date){return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;}
+function displayDate(value){const [year,month,day]=value.split("-");return `${day}/${month}/${year}`;}
+function setImportDefaults(){const today=new Date(),end=new Date(today);end.setDate(today.getDate()-((today.getDay()+6)%7));const start=new Date(end);start.setDate(end.getDate()-6);byId("import-date").value=inputDate(today);byId("period-start").value=inputDate(start);byId("period-end").value=inputDate(end);}
+function setImportFeedback(title,message,type=""){importFeedback.className=`import-feedback${type?` ${type}`:""}`;importFeedback.innerHTML="";const strong=document.createElement("strong"),span=document.createElement("span");strong.textContent=title;span.textContent=message;importFeedback.append(strong,span);}
+function saveImportedWeek(record){const imported=loadImportedWeeks().filter(item=>item.key!==record.key);imported.push(record);localStorage.setItem(importedWeeksStorageKey,JSON.stringify(imported));weeks=[...baseWeeks,...imported].reduce((result,item)=>{const found=result.findIndex(entry=>entry.key===item.key);if(found>=0)result[found]=item;else result.push(item);return result;},[]).sort((a,b)=>a.key.localeCompare(b.key));selectedWeek=record.key;populateWeekSelect();renderWeek(selectedWeek);}
+function updateRemoveButton(){const key=byId("import-date").value;removeImportedButton.hidden=!loadImportedWeeks().some(item=>item.key===key);}
+function openImport(){importForm.reset();setImportDefaults();byId("meta-file-name").textContent="Selecionar relatório semanal";byId("google-file-name").textContent="Selecionar relatório semanal";setImportFeedback("Pronto para receber os relatórios.","O sistema aceita CSV em português ou inglês e ignora linhas de total para não duplicar resultados.");updateRemoveButton();importDialog.showModal();}
+byId("import-open").addEventListener("click",openImport);byId("import-close").addEventListener("click",()=>importDialog.close());byId("import-cancel").addEventListener("click",()=>importDialog.close());importDialog.addEventListener("click",event=>{if(event.target===importDialog)importDialog.close();});
+metaCsvInput.addEventListener("change",()=>byId("meta-file-name").textContent=metaCsvInput.files?.[0]?.name||"Selecionar relatório semanal");googleCsvInput.addEventListener("change",()=>byId("google-file-name").textContent=googleCsvInput.files?.[0]?.name||"Selecionar relatório semanal");byId("import-date").addEventListener("change",updateRemoveButton);
+importForm.addEventListener("submit",async event=>{
+  event.preventDefault();
+  const metaFile=metaCsvInput.files?.[0],googleFile=googleCsvInput.files?.[0],date=byId("import-date").value,start=byId("period-start").value,end=byId("period-end").value,newFollowers=Number(byId("new-followers-input").value);
+  if(!date||!start||!end||!metaFile||!googleFile||!Number.isFinite(newFollowers)){setImportFeedback("Faltam dados para criar a semana.","Informe as datas, os dois CSVs e os novos seguidores.","error");return;}
+  if(start>end){setImportFeedback("Período inválido.","A data inicial deve vir antes da data final.","error");return;}
+  try{
+    setImportFeedback("Lendo os relatórios...","As campanhas do Google estão sendo separadas entre leads, inscritos e ignoradas.");
+    const [meta,google]=await Promise.all([metaFile.text().then(aggregateMeta),googleFile.text().then(aggregateGoogle)]),previous=weeks.filter(item=>item.key<date).at(-1);
+    if(!Number.isFinite(previous?.meta.followers))throw new Error("Não existe um total anterior de seguidores para calcular a nova base.");
+    const followers=previous.meta.followers+newFollowers,subscribers=Number.isFinite(previous?.google.subscribers)?previous.google.subscribers+google.newSubscribers:null;
+    const record={key:date,date:displayDate(date),period:{start:displayDate(start),end:displayDate(end)},source:"CSV",testOnly:/teste/i.test(metaFile.name)||/teste/i.test(googleFile.name),meta:{leads:meta.leads,cpl:meta.cpl,visits:meta.visits,followers,newFollowers},google:{leads:google.leads,cpl:google.cpl,subscribers,newSubscribers:google.newSubscribers},classification:{leadCampaigns:google.leadCampaigns,subscriberCampaigns:google.subscriberCampaigns,ignoredCampaigns:google.ignoredCampaigns},actions:[]};
+    saveImportedWeek(record);
+    const leadNames=google.leadCampaigns.slice(0,3).join(", "),subscriberNames=google.subscriberCampaigns.slice(0,3).join(", ")||"nenhuma",warnings=[...meta.warnings,...google.warnings];
+    setImportFeedback("Semana criada e campanhas conferidas.",`Google Leads: ${leadNames} — ${integer(google.leads)} leads a ${money(google.cpl)}. Campanhas de inscritos: ${subscriberNames} — ${integer(google.newSubscribers)} novos inscritos. Total de seguidores: ${integer(followers)}.${warnings.length?` ${warnings.join(" ")}`:""}`,"success");
+    removeImportedButton.hidden=false;
+  }catch(error){setImportFeedback("Não consegui importar estes arquivos.",error.message||"Confira o formato dos CSVs e tente novamente.","error");}
+});
+removeImportedButton.addEventListener("click",()=>{const key=byId("import-date").value,imported=loadImportedWeeks().filter(item=>item.key!==key);localStorage.setItem(importedWeeksStorageKey,JSON.stringify(imported));weeks=[...baseWeeks,...imported].sort((a,b)=>a.key.localeCompare(b.key));selectedWeek=weeks.at(-1).key;populateWeekSelect();renderWeek(selectedWeek);removeImportedButton.hidden=true;setImportFeedback("Semana removida.","O histórico voltou ao último registro disponível.","success");});
+renderWeek(selectedWeek);

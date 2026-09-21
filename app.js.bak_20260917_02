@@ -1,0 +1,207 @@
+const $=id=>document.getElementById(id);
+const brl=n=>Number.isFinite(n)?n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"}):"—";
+const num=n=>Number.isFinite(n)?n.toLocaleString("pt-BR"):"—";
+const M=(key,label,format="num",extra={})=>({key,label,format,...extra});
+const W=(key,meta,google=null,actions=[])=>({key,date:key.split("-").reverse().join("/"),meta,google,actions});
+const leads=[M("leads","Leads","num",{big:true}),M("cpl","Custo por lead","brl",{inverse:true}),M("visits","Visualizações da LP"),M("costVisit","Custo por visualização","brl",{inverse:true}),M("followers","Total de seguidores"),M("newFollowers","Novos seguidores","num",{arrow:true})];
+const traffic=[M("visits","Visitas / visualizações","num",{big:true}),M("costVisit","Custo por visita","brl",{inverse:true}),M("followers","Total de seguidores"),M("newFollowers","Novos seguidores","num",{arrow:true})];
+const google=[M("leads","Leads","num",{big:true}),M("cpl","Custo por lead","brl",{inverse:true}),M("subscribers","Total de inscritos"),M("newSubscribers","Novos inscritos","num",{arrow:true})];
+const oral=[M("leads","Leads totais","num",{big:true}),M("cpl","CPL geral","brl",{inverse:true}),M("webinarLeads","Webinar · leads"),M("webinarCpl","Webinar · CPL","brl",{inverse:true}),M("cadastroLeads","Cadastro · leads"),M("cadastroCpl","Cadastro · CPL","brl",{inverse:true}),M("visits","Visualizações da LP"),M("costVisit","Custo por visualização","brl",{inverse:true}),M("followers","Total de seguidores"),M("newFollowers","Novos seguidores","num",{arrow:true})];
+const metaCatalog=[M("leads","Leads","num",{big:true}),M("cpl","Custo por lead","brl",{inverse:true}),M("visits","Visualizações / visitas"),M("costVisit","Custo por visualização / visita","brl",{inverse:true}),M("profileVisits","Visitas ao perfil"),M("clicks","Cliques"),M("followers","Total de seguidores"),M("newFollowers","Novos seguidores","num",{arrow:true}),M("webinarLeads","Webinar · leads"),M("webinarCpl","Webinar · CPL","brl",{inverse:true}),M("cadastroLeads","Cadastro · leads"),M("cadastroCpl","Cadastro · CPL","brl",{inverse:true})];
+const googleCatalog=[M("leads","Leads","num",{big:true}),M("cpl","Custo por lead","brl",{inverse:true}),M("subscribers","Total de inscritos"),M("newSubscribers","Novos inscritos","num",{arrow:true})];
+
+const clients={
+ "4medic":{name:"4Medic",initials:"4M",metaBudget:2000,googleBudget:4500,google:true,followers:true,youtube:true,metaMetrics:leads,googleMetrics:google,weeks:[]},
+ "ethos":{name:"Ethos",initials:"ET",metaBudget:1000,googleBudget:3000,google:true,followers:true,youtube:true,metaMetrics:[M("clicks","Cliques","num",{big:true}),M("profileVisits","Visitas ao perfil"),M("followers","Total de seguidores"),M("newFollowers","Novos seguidores","num",{arrow:true})],googleMetrics:google,weeks:[]},
+ "harmonia":{name:"Harmonia",initials:"HA",metaBudget:1000,googleBudget:5000,google:true,followers:true,metaMetrics:traffic,googleMetrics:[M("leads","Leads","num",{big:true}),M("cpl","Custo por lead","brl",{inverse:true})],weeks:[]},
+ "muniz":{name:"Muniz Incorporadora",initials:"MI",metaBudget:750,google:false,followers:false,metaMetrics:[M("leads","Leads","num",{big:true}),M("cpl","Custo por lead","brl",{inverse:true})],weeks:[]},
+ "rz3":{name:"RZ3",initials:"RZ",metaBudget:900,google:false,followers:true,metaMetrics:traffic,weeks:[]},
+ "extra-ajuda":{name:"Extra Ajuda",initials:"EA",metaBudget:1200,google:false,followers:true,metaMetrics:leads,weeks:[]},
+ "trilha-radical":{name:"Trilha Radical",initials:"TR",metaBudget:850,google:false,followers:true,metaMetrics:[leads[0],leads[1],leads[4],leads[5]],weeks:[]},
+ "6hm":{name:"6HM",initials:"6H",metaBudget:500,google:false,followers:true,metaMetrics:traffic,weeks:[]},
+ "rooah":{name:"Rooah",initials:"RO",metaBudget:500,google:false,followers:true,metaMetrics:leads,weeks:[]},
+ "oralwave":{name:"OralWave",initials:"OW",metaBudget:1800,googleBudget:600,google:true,followers:true,metaMetrics:oral,googleMetrics:[M("leads","Leads","num",{big:true}),M("cpl","Custo por lead","brl",{inverse:true})],weeks:[]}
+};
+
+const clientThemes={
+ "4medic":{logo:"./logo-4medic-square.jpg",primary:"#2457f5",soft:"#edf2ff",accent:"#12835f",logoBg:"#1715ed"},
+ "ethos":{logo:"./assets/logos/ethos.jpg",primary:"#245b82",soft:"#eaf6f8",accent:"#5bb6ca",logoBg:"#ffffff"},
+ "harmonia":{logo:"./assets/logos/harmonia.jpg",primary:"#078ca4",soft:"#e8fafd",accent:"#11b8d1",logoBg:"#ffffff"},
+ "muniz":{logo:"./assets/logos/muniz-incorporadora.jpg",primary:"#bf741c",soft:"#fff4e3",accent:"#f4ad45",logoBg:"#ffffff"},
+ "rz3":{logo:"./assets/logos/rz3.jpg",primary:"#0b2f63",soft:"#edf3fb",accent:"#d8932d",logoBg:"#ffffff"},
+ "extra-ajuda":{logo:"./assets/logos/extra-ajuda.jpg",primary:"#4c46c8",soft:"#efefff",accent:"#252c2c",logoBg:"#ffffff"},
+ "trilha-radical":{logo:"./assets/logos/trilha-radical.jpg",primary:"#667548",soft:"#f3f5ec",accent:"#e88800",logoBg:"#ffffff"},
+ "6hm":{logo:"./assets/logos/6hm.jpg",primary:"#151515",soft:"#f0f0f0",accent:"#5f6875",logoBg:"#000000"},
+ "rooah":{logo:"./assets/logos/rooah.jpg",primary:"#202020",soft:"#fff7d1",accent:"#d6a500",logoBg:"#000000"},
+ "oralwave":{logo:"./assets/logos/oralwave.jpg",primary:"#087f79",soft:"#e7fbf9",accent:"#04b8ad",logoBg:"#04b8ad"}
+};
+
+let client=localStorage.getItem("performance-v2-client")||"4medic",selected="",weeks=[],actions=[];
+if(!clients[client])client="4medic";
+const key=kind=>`performance-v2-${kind}-${client}`;
+const json=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch{return d}};
+function defaultMetrics(platform){const c=clients[client];return platform==="google"?(c.googleMetrics||[]):c.metaMetrics}
+function metricCatalogFor(platform){return platform==="google"?googleCatalog:metaCatalog}
+function metricVersions(platform){if(window.performanceDb?.ready)return window.performanceDb.metricVersions(client,platform);const value=json(key(`metric-versions-${platform}`),[]);return Array.isArray(value)?value:[]}
+function effectiveMetrics(platform,date=selected){
+ const defaults=defaultMetrics(platform),versions=metricVersions(platform).filter(v=>v.from<=date).sort((a,b)=>a.from.localeCompare(b.from)),keys=versions.at(-1)?.keys||defaults.map(m=>m.key),catalog=metricCatalogFor(platform);
+ return keys.map(metricKey=>defaults.find(m=>m.key===metricKey)||catalog.find(m=>m.key===metricKey)).filter(Boolean);
+}
+function imported(){if(window.SUPABASE_CONFIG)return[];let x=json(key("imported"),[]);if(client==="4medic"&&!x.length)x=json("4medic-v2-imported-weeks",[]);return Array.isArray(x)?x.filter(v=>!v.testOnly):[]}
+function loadWeeks(){const extras=window.performanceDb?.ready?[]:imported();weeks=[...clients[client].weeks,...extras].reduce((a,x)=>{const i=a.findIndex(v=>v.key===x.key);i<0?a.push(x):a[i]=x;return a},[]).sort((a,b)=>a.key.localeCompare(b.key));if(!weeks.some(x=>x.key===selected))selected=weeks.at(-1)?.key}
+const active=()=>weeks.find(x=>x.key===selected)||weeks.at(-1),previous=()=>{const i=weeks.findIndex(x=>x.key===selected);return i>0?weeks[i-1]:null};
+const fmt=(v,f)=>f==="brl"?brl(v):num(v);
+const variation=(a,b)=>Number.isFinite(a)&&Number.isFinite(b)&&b!==0?(a-b)/Math.abs(b)*100:null;
+function delta(cur,prev,m){
+ if(!Number.isFinite(cur)||!Number.isFinite(prev))return'<em class="delta neutral">—</em>';
+ const d=cur-prev;if(m.arrow)return`<em class="delta ${d>0?"good":d<0?"bad":"neutral"}" title="Anterior: ${fmt(prev,m.format)}">${d>0?"↑":d<0?"↓":"→"}</em>`;
+ const pct=variation(cur,prev);if(pct===null)return'<em class="delta neutral">—</em>';
+ const cls=Math.abs(pct)<.05?"neutral":(m.inverse?pct<0:pct>0)?"good":"bad";
+ return`<em class="delta ${cls}" title="Anterior: ${fmt(prev,m.format)}">${pct>0?"↑":pct<0?"↓":"→"} ${Math.abs(pct).toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1})}%</em>`;
+}
+function metrics(el,defs,cur={},prev={}){el.innerHTML=defs.map(m=>`<div class="metric-row${m.big?" emphasis":""}"><span>${m.label}</span><strong>${fmt(cur?.[m.key],m.format)}</strong>${delta(cur?.[m.key],prev?.[m.key],m)}</div>`).join("")}
+function health(defs,cur,prev){let score=0,n=0;defs.filter(m=>!m.arrow).forEach(m=>{const v=variation(cur?.[m.key],prev?.[m.key]);if(v===null)return;n++;if(Math.abs(v)<.05)return;score+=(m.inverse?v<0:v>0)?1:-1});return!n?{text:"Sem comparação",cls:"neutral"}:score>0?{text:"Melhorou",cls:"good"}:score<0?{text:"Piorou",cls:"bad"}:{text:"Estável",cls:"neutral"}}
+function setHealth(id,h){$(id).textContent=h.text;$(id).className=`platform-health ${h.cls}`}
+const compact=n=>n>=1000?`R$ ${(n/1000).toLocaleString("pt-BR",{maximumFractionDigits:1})} mil`:brl(n);
+function populate(){
+ $("client-select").replaceChildren(...Object.entries(clients).map(([id,c])=>Object.assign(document.createElement("option"),{value:id,textContent:c.name})));$("client-select").value=client;
+}
+function weekOptions(){$("week-select").replaceChildren(...weeks.slice().reverse().map(w=>Object.assign(document.createElement("option"),{value:w.key,textContent:w.period?`${w.date} · ${w.period.start.slice(0,5)}–${w.period.end.slice(0,5)}`:w.date})));$("week-select").value=selected}
+function brand(){
+ const c=clients[client],theme=clientThemes[client]||clientThemes["4medic"],root=document.documentElement;document.querySelector(".brand-copy strong").textContent=c.name;document.querySelector(".brand").ariaLabel=`${c.name} — início`;
+ document.title=`${c.name} | Resumo rápido da conta`;
+ root.style.setProperty("--blue",theme.primary);root.style.setProperty("--blue-soft",theme.soft);root.style.setProperty("--brand-accent",theme.accent);root.style.setProperty("--brand-logo-bg",theme.logoBg);
+ document.querySelector(".brand-mark").innerHTML=`<img src="${theme.logo}" alt="Logo ${esc(c.name)}">`;
+ $("meta-budget").textContent=compact(c.metaBudget);$("google-budget-label").hidden=!c.google;if(c.google)$("google-budget").textContent=compact(c.googleBudget);
+ $("google-card").hidden=!c.google;document.querySelector(".platforms").classList.toggle("single",!c.google);
+}
+
+function openBudgetEditor(){
+ const c=clients[client];$("budget-title").textContent=`Editar orçamento · ${c.name}`;$("budget-scope").textContent="Atualize os valores mensais previstos para as plataformas desta conta.";$("meta-budget-input").value=Number(c.metaBudget||0);$("google-budget-field").hidden=!c.google;$("google-budget-input").required=c.google;$("google-budget-input").value=c.google?Number(c.googleBudget||0):"";$("budget-feedback").textContent="Os valores serão salvos no cadastro deste cliente.";$("budget-feedback").className="budget-feedback";$("budget-dialog").showModal();
+}
+async function saveBudgets(event){
+ event.preventDefault();const c=clients[client],meta=Number($("meta-budget-input").value),google=c.google?Number($("google-budget-input").value):null;
+ if(!Number.isFinite(meta)||meta<0||c.google&&(!Number.isFinite(google)||google<0)){$("budget-feedback").textContent="Informe valores iguais ou maiores que zero.";$("budget-feedback").className="budget-feedback error";return}
+ const submit=$("budget-form").querySelector('[type="submit"]');submit.disabled=true;$("budget-feedback").textContent="Salvando orçamento…";
+ try{if(window.performanceDb?.ready)await window.performanceDb.saveBudgets(client,meta,google);c.metaBudget=meta;c.googleBudget=google;brand();$("budget-feedback").textContent="Orçamento atualizado no Supabase.";$("budget-feedback").className="budget-feedback success";setTimeout(()=>$("budget-dialog").close(),550)}catch(error){console.error(error);$("budget-feedback").textContent="Não foi possível salvar. Tente novamente.";$("budget-feedback").className="budget-feedback error"}finally{submit.disabled=false}
+}
+function status(cur,prev){
+ const c=clients[client],metaDefs=effectiveMetrics("meta"),googleDefs=c.google?effectiveMetrics("google"):[],mh=health(metaDefs,cur.meta,prev?.meta),gh=c.google?health(googleDefs,cur.google,prev?.google):null;setHealth("meta-health",mh);if(gh)setHealth("google-health",gh);
+ const bad=[mh,gh].filter(Boolean).some(x=>x.cls==="bad"),good=[mh,gh].filter(Boolean).some(x=>x.cls==="good");
+ $("status-title").innerHTML=bad?`Conta pede atenção. <span>${good?"Há evolução em outra frente.":"Revise os indicadores."}</span>`:good?'Semana positiva. <span>Os principais indicadores evoluíram.</span>':'Conta estável. <span>Sem mudança conclusiva.</span>';
+ $("status-pill").textContent=bad?"Atenção":good?"Evolução":"Estável";
+ const first=metaDefs[0],v=variation(cur.meta?.[first.key],prev?.meta?.[first.key]),g=c.google?variation(cur.google?.leads,prev?.google?.leads):null,p=[];
+ if(v!==null)p.push(`${first.label} no Meta ${v>=0?"subiram":"caíram"} ${Math.abs(v).toLocaleString("pt-BR",{maximumFractionDigits:1})}%`);
+ if(g!==null)p.push(`leads no Google ${g>=0?"subiram":"caíram"} ${Math.abs(g).toLocaleString("pt-BR",{maximumFractionDigits:1})}%`);
+ $("status-copy").textContent=p.length?`${p.join(". ")}.`:"Ainda não há base suficiente para comparar esta semana.";
+}
+const esc=s=>{const d=document.createElement("div");d.textContent=String(s??"");return d.innerHTML};
+function renderActions(cur){
+ const saved=window.performanceDb?.ready?null:json(key(`actions-${selected}`),null);actions=saved||(cur.actions||[]).map(action=>Array.isArray(action)?{title:action[0],meta:action[1],done:false}:{...action});
+ $("action-list").innerHTML=actions.length?actions.map((a,i)=>`<label class="action-item"><input type="checkbox" data-i="${i}" ${a.done?"checked":""}><span class="check-box"></span><span><strong>${esc(a.title)}</strong><small>${esc(a.meta||"Prazo a definir")}</small></span></label>`).join(""):'<p class="empty-actions">Nenhuma ação registrada nesta semana.</p>';
+ $("action-list").querySelectorAll("input").forEach(i=>i.onchange=()=>{actions[+i.dataset.i].done=i.checked;saveActions()});pending();
+}
+function saveActions(){localStorage.setItem(key(`actions-${selected}`),JSON.stringify(actions));const cur=active();if(cur)cur.actions=actions.map(action=>({...action}));window.performanceDb?.saveActions(client,selected,actions);pending()}
+function pending(){const n=actions.filter(x=>!x.done).length;$("pending-count").textContent=`${n} ${n===1?"pendente":"pendentes"}`}
+function render(){
+ const c=clients[client],cur=active(),prev=previous(),metaDefs=effectiveMetrics("meta"),googleDefs=c.google?effectiveMetrics("google"):[];if(!cur)return;brand();weekOptions();metrics($("meta-metrics"),metaDefs,cur.meta,prev?.meta);
+ if(c.google)metrics($("google-metrics"),googleDefs,cur.google||{},prev?.google||{});status(cur,prev);renderActions(cur);
+ $("quick-notes").value=window.performanceDb?.ready?(cur.note||""):(localStorage.getItem(key(`notes-${selected}`))||cur.note||"");
+ $("meta-source-label").textContent=cur.period?"CSV semanal":"Registro do documento";if(c.google)$("google-source-label").textContent=cur.period?"CSV semanal":"Registro do documento";
+ $("google-insight").textContent=c.google?googleInsight(cur,prev):"";
+ $("footer-updated").textContent=`Atualizado em ${cur.date}`;$("footer-source").textContent=c.google?"Meta + Google · comparação semanal":"Meta Ads · comparação semanal";
+ $("history-meta-count").textContent=metaDefs[0].label;$("history-meta-cost").textContent=metaDefs.find(x=>x.inverse)?.label||"Custo Meta";renderCreative();
+}
+function googleInsight(cur,prev){if(!cur.google)return"Sem dados do Google nesta semana.";const d=Number.isFinite(cur.google.leads)&&Number.isFinite(prev?.google?.leads)?cur.google.leads-prev.google.leads:null,p=variation(cur.google.cpl,prev?.google?.cpl);if(d===null&&p===null)return"Sem comparação com a semana anterior.";if(d===0&&(p===null||Math.abs(p)<.05))return"Leads e CPL estáveis em relação à semana anterior.";return`${d===null?"":d===0?"Leads estáveis":`${Math.abs(d)} ${Math.abs(d)===1?"lead":"leads"} ${d>0?"a mais":"a menos"}`}${d!==null&&p!==null?" e ":""}${p===null?"":Math.abs(p)<.05?"CPL estável":`CPL ${p>0?"maior":"menor"} em ${Math.abs(p).toLocaleString("pt-BR",{maximumFractionDigits:1})}%`} que na semana anterior.`}
+function history(){
+ const c=clients[client],cur=active(),defs=effectiveMetrics("meta"),first=defs[0],cost=defs.find(x=>x.inverse);$("history-title").textContent=`Histórico · ${c.name}`;
+ $("history-summary").innerHTML=[["Semanas",weeks.length],["Semana atual",cur.date],[first.label,fmt(cur.meta?.[first.key],first.format)],[cost?.label||"Google leads",cost?fmt(cur.meta?.[cost.key],cost.format):num(cur.google?.leads)]].map(x=>`<span><small>${x[0]}</small><strong>${x[1]}</strong></span>`).join("");
+ $("history-body").innerHTML=weeks.slice().reverse().map(w=>`<tr class="${w.key===selected?"selected":""}"><td>${w.date}</td><td>${fmt(w.meta?.[first.key],first.format)}</td><td>${cost?fmt(w.meta?.[cost.key],cost.format):"—"}</td><td>${num(w.meta?.visits??w.meta?.profileVisits??w.meta?.clicks)}</td><td>${num(w.meta?.followers)}</td><td>${num(w.google?.leads)}</td><td>${brl(w.google?.cpl)}</td></tr>`).join("");
+ document.querySelector(".history-note").textContent="As variações usam sempre o registro imediatamente anterior do mesmo cliente. Campos ausentes aparecem como “—”.";
+}
+
+const creativeKey=kind=>key(`${kind}-${selected}`);
+function adLink(){return window.performanceDb?.ready?active()?.creative?.instagram_url||"":localStorage.getItem(creativeKey("ad"))||""}
+function embed(url){const m=url.match(/instagram\.com\/(p|reel)\/([^/?#]+)/i);return m?`https://www.instagram.com/${m[1]}/${m[2]}/embed/captioned/`:""}
+function renderCreative(){
+ const link=adLink(),image=window.performanceDb?.ready?active()?.creative?.signedUrl:localStorage.getItem(creativeKey("creative")),frame=$("instagram-frame"),manual=$("manual-creative"),fallback=$("ad-preview-link"),e=embed(link);
+ $("ad-open").href=link||"#";$("ad-open").setAttribute("aria-disabled",String(!link));$("ad-url-display").href=link||"#";$("ad-url-display").textContent=link?link.replace(/^https?:\/\/(www\.)?/,""):"Nenhum link associado";$("clear-creative-image").hidden=!image;
+ if(image){manual.src=image;manual.hidden=false;frame.hidden=true;fallback.hidden=true;$("creative-status").textContent="Print do criativo carregado.";return}
+ manual.hidden=true;if(e){frame.src=e;frame.hidden=false;fallback.hidden=true;$("creative-status").textContent="Publicação carregada do Instagram."}else{frame.hidden=true;fallback.hidden=false;fallback.href=link||"#";fallback.setAttribute("aria-disabled",String(!link));$("creative-status").textContent=link?"Prévia indisponível; abra o link ou envie um print.":"Adicione o link ou envie um print do criativo."}
+}
+
+const norm=s=>String(s??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^\p{L}\p{N}]+/gu," ").trim();
+function numeric(v){let s=String(v??"").trim().replace(/[R$\s%]/g,"");if(!s||s==="—")return null;if(s.includes(",")&&s.includes("."))s=s.lastIndexOf(",")>s.lastIndexOf(".")?s.replace(/\./g,"").replace(",","."):s.replace(/,/g,"");else if(s.includes(","))s=s.replace(/\./g,"").replace(",",".");const n=Number(s);return Number.isFinite(n)?n:null}
+function csv(text){
+ const lines=text.replace(/^\uFEFF/,""),first=lines.split(/\r?\n/).find(Boolean)||"",sep=(first.match(/;/g)||[]).length>(first.match(/,/g)||[]).length?";":",",rows=[];let row=[],cell="",quote=false;
+ for(let i=0;i<lines.length;i++){const ch=lines[i];if(ch==='"'){if(quote&&lines[i+1]==='"'){cell+='"';i++}else quote=!quote}else if(ch===sep&&!quote){row.push(cell);cell=""}else if((ch==="\n"||ch==="\r")&&!quote){if(ch==="\r"&&lines[i+1]==="\n")i++;row.push(cell);if(row.some(x=>x.trim()))rows.push(row);row=[];cell=""}else cell+=ch}row.push(cell);if(row.some(x=>x.trim()))rows.push(row);
+ const hi=rows.findIndex(r=>r.length>3&&r.some(v=>["campanha","campaign","nome da campanha"].includes(norm(v))));if(hi<0)throw Error("Não encontrei a coluna de campanha.");const heads=rows[hi].map(norm);return rows.slice(hi+1).map(r=>Object.fromEntries(heads.map((h,i)=>[h,r[i]??""]))).filter(r=>Object.values(r).some(Boolean));
+}
+function pick(row,names){for(const n of names){if(Object.hasOwn(row,n)&&row[n]!=="")return row[n]}for(const n of names){const k=Object.keys(row).find(x=>x.includes(n));if(k&&row[k]!=="")return row[k]}return""}
+function metaAggregate(rows){
+ const x={lead:0,leadSpend:0,visits:0,trafficSpend:0,clicks:0,profile:0,webinar:0,webinarSpend:0,cadastro:0,cadastroSpend:0};let hasLead=false,hasTraffic=false;
+ rows.forEach(r=>{const campaign=norm(pick(r,["nome da campanha","campanha","campaign"])),type=norm(pick(r,["tipo de resultado","result type"]));if(!campaign||/^total/.test(campaign))return;const result=numeric(pick(r,["resultados","results","conversoes","conversions"]))||0,spend=numeric(pick(r,["valor usado","valor gasto","amount spent","custo","cost"]))||0,lp=numeric(pick(r,["visualizacoes da pagina de destino","landing page views"]))||0,profile=numeric(pick(r,["visitas ao perfil","profile visits"]))||0,clicks=numeric(pick(r,["cliques no link","link clicks","cliques","clicks"]))||0,text=`${campaign} ${type}`,follower=/seguidor|follower/.test(text),tra=/trafego|traffic|visita|perfil|landing|pagina de destino/.test(text),lead=!follower&&/lead|cadastro|captacao|formulario|form|webinar|conversao/.test(text);
+  if(lead){x.lead+=result;x.leadSpend+=spend;hasLead=true;if(/webinar/.test(campaign)){x.webinar+=result;x.webinarSpend+=spend}if(/cadastro/.test(campaign)){x.cadastro+=result;x.cadastroSpend+=spend}}
+  if(tra||lp||profile){x.visits+=lp||profile||result;x.profile+=profile;x.clicks+=clicks;x.trafficSpend+=spend;hasTraffic=true}
+ });
+ return{leads:hasLead?x.lead:null,cpl:hasLead&&x.lead?x.leadSpend/x.lead:null,visits:hasTraffic?x.visits:null,costVisit:hasTraffic&&x.visits?x.trafficSpend/x.visits:null,clicks:x.clicks||null,profileVisits:x.profile||null,webinarLeads:x.webinar||null,webinarCpl:x.webinar?x.webinarSpend/x.webinar:null,cadastroLeads:x.cadastro||null,cadastroCpl:x.cadastro?x.cadastroSpend/x.cadastro:null};
+}
+function googleAggregate(rows){
+ let leads=0,spend=0,newSubscribers=0,found=false;const totals=[];
+ rows.forEach(r=>{const campaign=norm(pick(r,["campanha","campaign"])),status=norm(pick(r,["status da campanha","campaign status"])),type=norm(pick(r,["tipo de campanha","campaign type"])),conv=numeric(pick(r,["conversoes","conversions","todas as conversoes","all conversions"]))||0,cost=numeric(pick(r,["custo","cost"]))||0,subs=numeric(pick(r,["assinantes adquiridos","subscribers gained","earned subscribers"]))||0,total=/^total/.test(`${status} ${campaign}`),follower=/seguidor|subscriber|inscrito|youtube|video/.test(`${campaign} ${type}`),search=/pesquisa|search/.test(`${status} ${campaign} ${type}`);
+  if(total&&search&&cost>0)totals.push(cost);if(!total&&search&&!follower){leads+=conv;spend+=cost;found=true}if(subs>newSubscribers)newSubscribers=subs
+ });const actualSpend=totals.length?Math.max(...totals):spend;return{leads:found?leads:null,cpl:found&&leads?actualSpend/leads:null,newSubscribers:newSubscribers||null};
+}
+let editingPlatform="meta";
+function metricOptionMarkup(def,checked){
+ return`<div class="metric-option" data-key="${def.key}"><input id="metric-${def.key}" type="checkbox" ${checked?"checked":""}><label for="metric-${def.key}">${def.label}</label><button class="metric-order move-up" type="button" aria-label="Mover ${def.label} para cima" title="Mover para cima"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button><button class="metric-order move-down" type="button" aria-label="Mover ${def.label} para baixo" title="Mover para baixo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></div>`;
+}
+function renderMetricEditor(keys){
+ const catalog=metricCatalogFor(editingPlatform),ordered=[...keys,...catalog.map(m=>m.key).filter(k=>!keys.includes(k))];
+ $("metric-options").innerHTML=ordered.map(k=>metricOptionMarkup(catalog.find(m=>m.key===k),keys.includes(k))).join("");
+ $("metric-options").querySelectorAll(".move-up").forEach(button=>button.onclick=()=>{const row=button.closest(".metric-option"),before=row.previousElementSibling;if(before)row.parentNode.insertBefore(row,before)});
+ $("metric-options").querySelectorAll(".move-down").forEach(button=>button.onclick=()=>{const row=button.closest(".metric-option"),after=row.nextElementSibling;if(after)row.parentNode.insertBefore(after,row)});
+}
+function openMetricEditor(platform){
+ editingPlatform=platform;const c=clients[client],label=platform==="google"?"Google Ads":"Meta e Instagram",current=effectiveMetrics(platform).map(m=>m.key);
+ $("metrics-title").textContent=`Indicadores · ${label}`;$("metrics-scope").textContent=`${c.name}: esta configuração valerá de ${active().date} em diante. As semanas anteriores não serão alteradas.`;$("metrics-feedback").textContent="";renderMetricEditor(current);$("metrics-dialog").showModal();
+}
+function saveMetricStrategy(event){
+ event.preventDefault();const rows=[...$("metric-options").querySelectorAll(".metric-option")],keys=rows.filter(row=>row.querySelector("input").checked).map(row=>row.dataset.key);
+ if(!keys.length){$("metrics-feedback").textContent="Mantenha pelo menos um indicador ativo.";return}
+ const versions=metricVersions(editingPlatform).filter(v=>v.from<selected);versions.push({from:selected,keys});localStorage.setItem(key(`metric-versions-${editingPlatform}`),JSON.stringify(versions));window.performanceDb?.saveMetricStrategy(client,editingPlatform,selected,keys);$("metrics-dialog").close();render();
+}
+function setupImport(){
+ const c=clients[client],cur=active();$("google-upload-card").hidden=!c.google;$("google-csv").required=c.google;$("followers-field").hidden=!c.followers;$("new-followers-input").required=c.followers;$("new-followers-input").min="";$("import-title").textContent=`Importar semana · ${c.name}`;
+ $("import-description").textContent=c.google?"Envie os relatórios do Meta e do Google. Cada objetivo será separado automaticamente.":"Envie o relatório do Meta. Cada objetivo será separado automaticamente.";
+ $("import-tip").textContent=c.google?"Exporte no nível de campanhas. No Google, Search entra como lead e campanhas de inscritos do YouTube ficam separadas.":"Exporte no nível de campanhas. Seguidores, tráfego, visitas e leads são identificados pelo nome e pelo tipo de resultado.";
+ const end=new Date(`${cur.key}T12:00:00`);end.setDate(end.getDate()+7);const start=new Date(end);start.setDate(start.getDate()-6);$("import-date").value=end.toISOString().slice(0,10);$("period-start").value=start.toISOString().slice(0,10);$("period-end").value=end.toISOString().slice(0,10);
+ ["meta-csv","google-csv"].forEach(id=>$(id).value="");$("new-followers-input").value="";$("meta-file-name").textContent=$("google-file-name").textContent="Selecionar relatório semanal";$("import-feedback").textContent=c.google?"Envie os CSVs no nível de campanha.":"Envie o CSV do Meta no nível de campanha.";
+}
+async function importSubmit(e){
+ e.preventDefault();const c=clients[client],mf=$("meta-csv").files[0],gf=$("google-csv").files[0];if(!mf||c.google&&!gf){$("import-feedback").textContent="Selecione todos os relatórios necessários.";return}
+ try{const meta=metaAggregate(csv(await mf.text())),g=c.google?googleAggregate(csv(await gf.text())):null,prev=active(),nf=numeric($("new-followers-input").value);
+  if(c.followers){meta.newFollowers=nf;meta.followers=Number.isFinite(prev.meta?.followers)&&Number.isFinite(nf)?prev.meta.followers+nf:null}
+  if(c.google&&c.youtube)g.subscribers=Number.isFinite(prev.google?.subscribers)&&Number.isFinite(g.newSubscribers)?prev.google.subscribers+g.newSubscribers:null;
+  const item=W($("import-date").value,meta,g,[]);item.period={start:$("period-start").value.split("-").reverse().join("/"),end:$("period-end").value.split("-").reverse().join("/")};const data=imported().filter(x=>x.key!==item.key);data.push(item);localStorage.setItem(key("imported"),JSON.stringify(data));if(window.performanceDb?.ready){clients[client].weeks=clients[client].weeks.filter(x=>x.key!==item.key);clients[client].weeks.push(item);await window.performanceDb.saveWeek(client,item)}selected=item.key;loadWeeks();render();$("import-dialog").close();
+ }catch(err){$("import-feedback").textContent=`Não foi possível importar: ${err.message}`}
+}
+
+$("client-select").onchange=e=>{client=e.target.value;localStorage.setItem("performance-v2-client",client);selected="";loadWeeks();render()};
+$("week-select").onchange=e=>{selected=e.target.value;render()};
+$("quick-notes").oninput=e=>{localStorage.setItem(key(`notes-${selected}`),e.target.value);const cur=active();if(cur)cur.note=e.target.value;window.performanceDb?.saveNote(client,selected,e.target.value)};
+$("quick-action-form").onsubmit=e=>{e.preventDefault();const input=$("quick-action");if(!input.value.trim())return;actions.push({title:input.value.trim(),meta:"Prazo a definir",done:false});input.value="";saveActions();renderActions(active())};
+$("history-open").onclick=()=>{history();$("history-dialog").showModal()};$("history-close").onclick=()=>$("history-dialog").close();
+$("budget-open").onclick=$("budget-open-mobile").onclick=openBudgetEditor;["budget-close","budget-cancel"].forEach(id=>$(id).onclick=()=>$("budget-dialog").close());$("budget-form").onsubmit=saveBudgets;
+document.querySelectorAll(".metric-edit").forEach(button=>button.onclick=()=>openMetricEditor(button.dataset.platform));
+$("metrics-close").onclick=$("metrics-cancel").onclick=()=>$("metrics-dialog").close();$("metrics-form").onsubmit=saveMetricStrategy;
+$("metrics-default").onclick=()=>{renderMetricEditor(defaultMetrics(editingPlatform).map(m=>m.key));$("metrics-feedback").textContent="Padrão carregado. Clique em Salvar estratégia para aplicar."};
+$("import-open").onclick=()=>{setupImport();$("import-dialog").showModal()};["import-close","import-cancel"].forEach(id=>$(id).onclick=()=>$("import-dialog").close());$("import-form").onsubmit=importSubmit;
+$("meta-csv").onchange=e=>$("meta-file-name").textContent=e.target.files[0]?.name||"Selecionar relatório semanal";$("google-csv").onchange=e=>$("google-file-name").textContent=e.target.files[0]?.name||"Selecionar relatório semanal";
+$("edit-ad-link").onclick=()=>{$("ad-link-form").hidden=false;$("ad-link-input").value=adLink();$("ad-link-input").focus()};
+$("ad-link-form").onsubmit=e=>{e.preventDefault();const value=$("ad-link-input").value.trim();try{if(value)new URL(value);localStorage.setItem(creativeKey("ad"),value);const cur=active();if(cur){cur.creative=cur.creative||{};cur.creative.instagram_url=value||null}window.performanceDb?.saveCreativeLink(client,selected,value);$("ad-link-form").hidden=true;renderCreative()}catch{$("ad-link-feedback").textContent="Cole um endereço completo e válido."}};
+$("creative-upload").onchange=e=>{const file=e.target.files[0];if(!file)return;if(file.size>4500000){$("creative-status").textContent="A imagem deve ter menos de 4,5 MB.";return}window.performanceDb?.uploadCreative(client,selected,file).catch(()=>{$("creative-status").textContent="Não foi possível salvar a imagem no banco."});const reader=new FileReader();reader.onload=()=>{try{localStorage.setItem(creativeKey("creative"),reader.result);const cur=active();if(cur){cur.creative=cur.creative||{};cur.creative.signedUrl=reader.result}renderCreative()}catch{$("creative-status").textContent="A imagem é grande demais para este navegador."}};reader.readAsDataURL(file)};
+$("clear-creative-image").onclick=()=>{localStorage.removeItem(creativeKey("creative"));const cur=active();if(cur?.creative)cur.creative.signedUrl=null;window.performanceDb?.clearCreativeImage(client,selected);renderCreative()};
+$("remove-imported-week").onclick=async()=>{if(!confirm("Remover esta semana e todos os dados associados?"))return;if(window.performanceDb?.ready){await window.performanceDb.deleteWeek(client,selected);clients[client].weeks=clients[client].weeks.filter(x=>x.key!==selected)}localStorage.setItem(key("imported"),JSON.stringify(imported().filter(x=>x.key!==selected)));selected="";loadWeeks();render();$("import-dialog").close()};
+
+populate();loadWeeks();render();

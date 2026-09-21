@@ -1,0 +1,69 @@
+# Taiom Performance — preview Supabase
+
+Painel semanal multi-cliente conectado ao projeto Supabase `Taiom-austral`.
+
+## Objetivo
+
+Permitir que a equipe identifique, em poucos segundos, a situação geral da conta, os principais movimentos por plataforma, as próximas ações e o anúncio associado à semana.
+
+## Arquivos
+
+- `index.html`: estrutura da página;
+- `styles.css`: direção visual e responsividade;
+- `app.js`: comparações automáticas, importação semanal e interface do painel;
+- `supabase-app.js`: autenticação, leitura, gravação e armazenamento de criativos;
+- `supabase-config.js`: URL e chave publicável do projeto; não contém chave secreta;
+- `assets/logos/`: logos utilizadas para personalizar o painel conforme o cliente selecionado;
+- `supabase/001_initial_schema.sql`: tabelas, RLS, políticas e bucket privado;
+- `supabase/002_seed_history.sql`: carga inicial gerada a partir do histórico preservado;
+- `supabase/003_auth_bootstrap.sql`: autoriza apenas o primeiro usuário como proprietário.
+- `supabase/004_workspace_invitations.sql`: convites por e-mail, papéis de acesso e remoção de membros.
+- `supabase/005_client_display_settings.sql`: preferências de exibição e estratégias de métricas por cliente.
+
+## Execução local
+
+Execute `node serve_preview.mjs` e abra `http://127.0.0.1:8767/`.
+
+## Vercel
+
+- projeto: `austral-app/performance` (renomeado em 2026-09-19; nomes anteriores: `taiom-claude/web-supabase-preview-v1`, depois `taiom-claude/austral-performance-app`);
+- time: `austral-app` (slug renomeado de `taiom-claude` em 2026-09-19; nome de exibição "app performance");
+- **endereço oficial de produção: `https://performance-austral-app.vercel.app`** (definido em 2026-09-19);
+- `https://austral-performance.vercel.app` NÃO pertence a esta conta Vercel (`taweragt@gmail.com`) — confirmado via `vercel domains ls`, que não lista esse domínio. Registros anteriores neste projeto (17/09) descreviam esse alias como concluído, mas isso não foi possível reproduzir nem confirmar em 19/09; a conta/sessão real usada para aquele alias não foi localizada;
+- decisão tomada em 2026-09-19: em vez de continuar tentando recuperar o domínio antigo, o time e o projeto foram renomeados para obter um endereço `.vercel.app` limpo, sem referência a nomes pessoais;
+- `.vercelignore` exclui backups, documentação interna, servidor local e scripts SQL do pacote publicado;
+- `vercel.json` aplica cabeçalhos básicos de segurança.
+
+## Segurança
+
+- todas as tabelas usam Row Level Security;
+- somente membros autenticados do workspace acessam os dados;
+- somente o proprietário pode convidar ou remover pessoas pelo painel “Acessos”;
+- convidados recebem um link de acesso por e-mail e não precisam criar conta na Vercel;
+- o bucket `performance-creatives` é privado e aceita apenas JPG, PNG e WebP de até 5 MB;
+- a chave secreta do Supabase não é usada no navegador.
+
+## Personalização
+
+- logo e cores mudam automaticamente ao selecionar o cliente;
+- tema claro/escuro alternado pelo botão de sol, com preferência salva no navegador;
+- orçamento mensal de Meta e Google é editável e salvo no cadastro do cliente no Supabase;
+- clientes sem Google exibem apenas o orçamento do Meta;
+- o tema altera controles e destaques, mantendo os cards de dados neutros para garantir legibilidade.
+
+## Persistência das importações
+
+- toda semana importada é mantida no `localStorage` como cache deduplicado por cliente e data;
+- uma fila separada registra somente as semanas ainda pendentes de sincronização;
+- com o Supabase disponível, o painel limpa a pendência após confirmação real do banco, mas preserva o cache local;
+- se o Supabase estiver indisponível, retornar erro ou não devolver a semana na recarga, a cópia local reconstrói a interface;
+- ao restabelecer a conexão, somente as pendências são reenviadas automaticamente;
+- `tests/persistence.test.mjs` cobre retenção offline, sucesso do banco e recarga completa a partir do cache.
+
+## Continuidade da navegação e datas
+
+- a última tela aberta, o cliente e a semana selecionada são preservados no navegador e restaurados depois da autenticação e da carga do Supabase;
+- o formulário de importação possui apenas o campo “Data do relatório”;
+- o seletor de semanas mostra uma única data, sem intervalo duplicado;
+- datas futuras ficam bloqueadas pelo formulário;
+- `tests/report-date.test.mjs` cobre preenchimento, validade e bloqueio de datas futuras.
