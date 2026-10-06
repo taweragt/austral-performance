@@ -283,3 +283,23 @@ Usar o painel normalmente e cadastrar os supervisores pelo botão “Acessos”.
 - prévia Vercel `dpl_2k2kQtc96mhZ9WaMihmZbhvgCucA` criada com estado `READY`;
 - URL da prévia: `https://performance-asvfobxtg-austral-app.vercel.app`;
 - produção não foi alterada e nenhuma semana antiga foi excluída.
+
+## Implementação — edição individual de métricas em 2026-09-21
+
+- preservado o lápis do cabeçalho para configurar quais métricas aparecem na análise;
+- incluído um lápis discreto em cada linha da visão semanal;
+- criado formulário acessível com contexto do cliente, data e plataforma;
+- valores aceitam vírgula ou ponto, são validados como números não negativos e podem ser limpos;
+- criado `saveMetricValue()` no conector Supabase para atualizar ou excluir somente a métrica selecionada;
+- implementada fila local independente para correções individuais, incluindo exclusões, com nova tentativa após reconexão;
+- cópia local da semana é preservada para manter a correção depois de recarregar a página;
+- edição direta fica desativada no consolidado mensal, evitando alteração ambígua de uma soma ou média;
+- cache de interface atualizado para `20260921-2`;
+- testes de persistência, importadores e data única aprovados;
+- conferência visual local realizada em tela desktop com os controles por linha e o formulário de edição;
+- backups `*.bak_20260921_02` criados antes da alteração;
+- autorização da Vercel renovada pelo usuário na conta `taweragt-4638`;
+- preview Vercel `dpl_1p5Y2qYQ4nNmrPg3xs57xYACxHct` criado com estado `READY`;
+- URL do preview: `https://performance-8sk3zwfzf-austral-app.vercel.app`;
+- o preview está protegido pela autenticação de desenvolvimento da Vercel; a interface autenticada foi validada localmente;
+- produção não foi alterada.

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Recuperação histórica · Austral</title>
+  <link rel="stylesheet" href="./styles.css?v=20260921-2">
+  <style>
+    body{min-height:100vh;display:grid;place-items:center;padding:24px}.recovery{width:min(760px,100%);padding:28px;border:1px solid var(--line);border-radius:18px;background:var(--surface);box-shadow:var(--shadow)}.recovery h1{margin:0;font:400 34px var(--serif)}.recovery>p{color:var(--muted);line-height:1.6}.recovery-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:20px 0}.recovery-grid span{padding:13px;border:1px solid var(--line);border-radius:10px;background:var(--paper)}.recovery-grid small,.recovery-grid strong{display:block}.recovery-grid small{color:var(--muted);font-size:8px;text-transform:uppercase}.recovery-grid strong{margin-top:5px;font:700 16px var(--mono)}.recovery-actions{display:flex;flex-wrap:wrap;gap:8px}.recovery-actions button{height:40px;padding:0 15px;border-radius:9px;font-size:9px;font-weight:800}.recovery-actions button:disabled{opacity:.5;cursor:wait}.recovery-log{min-height:90px;margin-top:18px;padding:14px;border-left:3px solid var(--blue);border-radius:0 9px 9px 0;background:var(--blue-soft);font:500 10px/1.6 var(--mono);white-space:pre-wrap}.recovery-log.error{border-color:var(--red);background:var(--red-soft)}.recovery-log.success{border-color:var(--green);background:var(--green-soft)}@media(max-width:620px){.recovery-grid{grid-template-columns:1fr 1fr}.recovery-actions button{flex:1}}
+  </style>
+</head>
+<body>
+  <main class="recovery">
+    <p class="overline">Ferramenta temporária</p>
+    <h1>Recuperação do histórico</h1>
+    <p>Importação não destrutiva dos registros existentes no Google Docs. Dados atuais permanecem com prioridade; somente semanas, métricas e ações ausentes serão adicionadas.</p>
+    <div class="recovery-grid"><span><small>Clientes</small><strong>10</strong></span><span><small>Semanas</small><strong>309</strong></span><span><small>Métricas</small><strong>1.190</strong></span><span><small>Ações</small><strong>766</strong></span></div>
+    <div class="recovery-actions"><button class="secondary-button" id="backup" type="button">1. Baixar backup</button><button class="primary-button" id="import" type="button" disabled>2. Importar histórico</button><button class="secondary-button" id="verify" type="button" disabled>3. Verificar resultado</button></div>
+    <div class="recovery-log" id="log" aria-live="polite">Verificando autenticação…</div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./supabase-config.js"></script>
+  <script src="./history-recovery.js?v=20260921-1"></script>
+</body>
+</html>

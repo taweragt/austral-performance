@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20260919-1">
+  <link rel="stylesheet" href="./styles.css?v=20260922-4">
 </head>
 <body>
   <a class="skip-link" href="#resumo">Ir para o resumo</a>
@@ -236,6 +236,29 @@
     </form>
   </dialog>
 
+  <dialog class="budget-dialog metric-value-dialog" id="metric-value-dialog" aria-labelledby="metric-value-title">
+    <form id="metric-value-form" novalidate>
+      <div class="budget-head">
+        <div><p class="overline">Correção da semana</p><h2 id="metric-value-title">Editar valor</h2><p id="metric-value-scope"></p></div>
+        <button id="metric-value-close" type="button" aria-label="Fechar edição do valor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="metric-value-body">
+        <div class="field-group">
+          <label for="metric-value-input" id="metric-value-label">Valor</label>
+          <input id="metric-value-input" type="text" inputmode="decimal" autocomplete="off" required>
+          <small>Use vírgula ou ponto para casas decimais.</small>
+        </div>
+        <p class="budget-feedback" id="metric-value-feedback" aria-live="polite"></p>
+      </div>
+      <div class="metric-value-footer">
+        <button class="danger-button" id="metric-value-clear" type="button">Limpar valor</button>
+        <span></span>
+        <button class="secondary-button" id="metric-value-cancel" type="button">Cancelar</button>
+        <button class="primary-button" type="submit">Salvar valor</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog class="import-dialog" id="import-dialog" aria-labelledby="import-title">
     <form id="import-form" novalidate>
       <div class="import-head">
@@ -248,14 +271,14 @@
       </div>
 
       <div class="import-body">
-        <div class="period-card">
+        <div class="period-card weekly-import-field">
           <div class="field-group">
             <label for="import-date">Data do relatório</label>
             <input id="import-date" type="date" required>
           </div>
         </div>
 
-        <div class="upload-grid">
+        <div class="upload-grid weekly-import-field">
           <label class="upload-card" for="meta-csv">
             <span class="upload-icon">M</span>
             <span><strong>CSV do Meta Ads</strong><small id="meta-file-name">Selecionar relatório semanal</small></span>
@@ -267,15 +290,50 @@
             <input id="google-csv" type="file" accept=".csv,text/csv" required>
           </label>
         </div>
-        <p class="import-tip" id="import-tip">Exporte no nível de campanhas. Meta: campanha, tipo de resultado, resultados, valor gasto e visualizações da página de destino. Google: campanha, conversões, custo e assinantes adquiridos. Os novos inscritos do YouTube vêm automaticamente do CSV.</p>
+        <div class="import-helper-row weekly-import-field">
+          <p class="import-tip" id="import-tip">Exporte no nível de campanhas. Meta: campanha, tipo de resultado, resultados, valor gasto e visualizações da página de destino. Google: campanha, conversões, custo e assinantes adquiridos. Os novos inscritos do YouTube vêm automaticamente do CSV.</p>
+          <button class="history-inline-trigger" id="history-import-open" type="button">+ Histórico</button>
+        </div>
 
-        <div class="manual-grid single-field">
+        <div class="manual-grid single-field weekly-import-field">
           <div class="field-group" id="followers-field">
             <label for="new-followers-input">Novos seguidores</label>
             <input id="new-followers-input" type="number" step="1" inputmode="numeric" placeholder="Ex.: 34" required>
             <small>O total será calculado usando a base da semana anterior.</small>
           </div>
         </div>
+
+        <section class="history-import-panel" id="history-import-panel" hidden aria-labelledby="history-import-heading">
+          <div>
+            <p class="overline">Carga de histórico</p>
+            <h3 id="history-import-heading">Dados históricos por semana</h3>
+            <p>Envie os relatórios disponíveis. O sistema agrupa por semana e preenche somente métricas ausentes.</p>
+          </div>
+          <label class="upload-card" for="history-meta-csv">
+            <span class="upload-icon">M</span>
+            <span><strong>CSV diário do Meta Ads</strong><small id="history-meta-file-name">Selecionar CSV com o período completo</small></span>
+            <input id="history-meta-csv" type="file" accept=".csv,text/csv">
+          </label>
+          <label class="upload-card" for="history-google-daily-csv">
+            <span class="upload-icon">G</span>
+            <span><strong>CSV diário do Google Ads</strong><small id="history-google-daily-file-name">Cliques e custo por dia</small></span>
+            <input id="history-google-daily-csv" type="file" accept=".csv,text/csv">
+          </label>
+          <label class="upload-card" for="history-google-conversions-csv">
+            <span class="upload-icon">G</span>
+            <span><strong>CSV de conversões do Google</strong><small id="history-google-conversions-file-name">Dia, ação de conversão e conversões</small></span>
+            <input id="history-google-conversions-csv" type="file" accept=".csv,text/csv">
+          </label>
+          <details class="history-guide">
+            <summary>Como gerar os dois CSVs do Google Ads</summary>
+            <div>
+              <p><strong>1. Relatório diário:</strong> em Relatórios, crie uma tabela com <em>Dia</em> e <em>Campanha</em> nas linhas; inclua <em>Cliques</em> e <em>Custo</em>. Exporte em CSV e envie no segundo campo acima.</p>
+              <p><strong>2. Relatório de conversões:</strong> crie uma tabela com <em>Dia</em>, <em>Ação de conversão</em> e, se disponível, <em>Campanha</em> nas linhas; inclua somente <em>Conversões</em>. Exporte em CSV e envie no terceiro campo.</p>
+              <p>Use o mesmo período nos dois relatórios. O sistema soma por semana e separa leads de inscrições do YouTube.</p>
+            </div>
+          </details>
+          <div class="history-preview" id="history-preview" aria-live="polite">Selecione um CSV para conferir as semanas identificadas antes de importar.</div>
+        </section>
 
         <div class="import-feedback" id="import-feedback" aria-live="polite">
           <strong>Pronto para receber os relatórios.</strong>
@@ -287,7 +345,7 @@
         <button class="danger-button" id="remove-imported-week" type="button" hidden>Remover semana importada</button>
         <span></span>
         <button class="secondary-button" id="import-cancel" type="button">Cancelar</button>
-        <button class="primary-button" type="submit">Criar semana</button>
+        <button class="primary-button" id="import-submit" type="submit">Criar semana</button>
       </div>
     </form>
   </dialog>
@@ -319,7 +377,7 @@
   <footer class="page-footer"><span id="footer-updated">Painel protegido</span><span id="footer-source">Dados carregados após autenticação</span></footer>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./supabase-config.js?v=20260916-1"></script>
-  <script src="./app.js?v=20260921-1"></script>
-  <script src="./supabase-app.js?v=20260921-1"></script>
+  <script src="./app.js?v=20261005-2"></script>
+  <script src="./supabase-app.js?v=20261005-2"></script>
 </body>
 </html>

@@ -16,6 +16,10 @@
 
   const weekIds = new Map();
   const metricVersionsByClient = new Map();
+  const actionSaveQueues = new Map();
+  // Última lista de ações confirmada pelo banco em cada semana (cliente:data).
+  const knownActions = new Map();
+  const isUuid = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || ""));
   let noteTimer = null;
   let currentUser = null;
   let currentRole = null;
@@ -261,6 +265,10 @@
       current.push({ id: row.id, title: row.title, meta: row.details, done: row.done });
       actionsByWeek.set(row.week_id, current);
     });
+    knownActions.clear();
+    rows.forEach((row) => {
+      knownActions.set(`${row.client_id}:${row.reference_date}`, (actionsByWeek.get(row.id) || []).map((action, position) => ({ id: action.id, title: action.title, position })));
+    });
 
     const creativesByWeek = new Map(creativeRows.map((row) => [row.week_id, row]));
 
@@ -286,6 +294,16 @@
     });
   }
 
+  async function loadMetricRows() {
+    const data = [];
+    for (let from = 0; ; from += 1000) {
+      const result = await database.from("weekly_metrics").select("week_id,platform,metric_key,value").range(from, from + 999);
+      if (result.error) return result;
+      data.push(...(result.data || []));
+      if ((result.data || []).length < 1000) return { data, error: null };
+    }
+  }
+
   async function loadDatabase() {
     statusBadge.textContent = "Sincronizando…";
     statusBadge.dataset.state = "busy";
@@ -293,7 +311,7 @@
     const [clientResult, weekResult, metricResult, actionResult, strategyResult, creativeResult, campaignStrategyResult] = await Promise.all([
       database.from("clients").select("*").order("sort_order"),
       database.from("weeks").select("*").order("reference_date"),
-      database.from("weekly_metrics").select("week_id,platform,metric_key,value"),
+      loadMetricRows(),
       database.from("actions").select("*").order("position"),
       database.from("metric_strategies").select("*").order("effective_from"),
       database.from("creatives").select("*"),
@@ -420,6 +438,32 @@
     statusBadge.textContent = "Banco conectado";
   }
 
+  async function saveMetricValue(clientId, week, platform, metricKey, value) {
+    statusBadge.textContent = "Salvando valor…";
+    statusBadge.dataset.state = "busy";
+    let weekId = weekIds.get(`${clientId}:${week.key}`);
+    if (!weekId) {
+      const periodStart = week.period?.start?.split("/").reverse().join("-") || null;
+      const periodEnd = week.period?.end?.split("/").reverse().join("-") || null;
+      const weekResult = await database.from("weeks").upsert({
+        client_id: clientId,
+        reference_date: week.key,
+        period_start: periodStart,
+        period_end: periodEnd,
+        source: week.source === "csv" || week.period ? "csv" : "manual",
+      }, { onConflict: "client_id,reference_date" }).select("id").single();
+      if (weekResult.error) throw weekResult.error;
+      weekId = weekResult.data.id;
+      weekIds.set(`${clientId}:${week.key}`, weekId);
+    }
+    const result = Number.isFinite(value)
+      ? await database.from("weekly_metrics").upsert({ week_id: weekId, platform, metric_key: metricKey, value }, { onConflict: "week_id,platform,metric_key" })
+      : await database.from("weekly_metrics").delete().eq("week_id", weekId).eq("platform", platform).eq("metric_key", metricKey);
+    if (result.error) throw result.error;
+    statusBadge.textContent = "Banco conectado";
+    statusBadge.dataset.state = "ok";
+  }
+
   window.performanceDb = {
     database,
     ready: false,
@@ -429,6 +473,10 @@
     async saveWeek(clientId, week) {
       try { await saveWeek(clientId, week); }
       catch (error) { console.error(error); statusBadge.textContent = "Erro ao salvar"; throw error; }
+    },
+    async saveMetricValue(clientId, week, platform, metricKey, value) {
+      try { await saveMetricValue(clientId, week, platform, metricKey, value); }
+      catch (error) { console.error(error); statusBadge.textContent = "Erro ao salvar"; statusBadge.dataset.state = "error"; throw error; }
     },
     async saveBudgets(clientId, metaBudget, googleBudget) {
       statusBadge.textContent = "Salvando orçamento…";
@@ -453,20 +501,78 @@
       statusBadge.dataset.state = "ok";
     },
     async saveActions(clientId, referenceDate, values) {
-      try {
+      const queueKey = `${clientId}:${referenceDate}`;
+      const snapshot = values
+        .map((value) => ({
+          id: isUuid(value.id) ? value.id : null,
+          title: String(value.title || "").trim(),
+          details: value.meta || "",
+          done: Boolean(value.done),
+        }))
+        .filter((value) => value.title)
+        .map((value, position) => ({ ...value, position }));
+      const previous = actionSaveQueues.get(queueKey) || Promise.resolve();
+      // Fila por semana: cada gravação espera a anterior, então cliques rápidos não duplicam linhas.
+      const queued = previous.catch(() => {}).then(async () => {
+        statusBadge.textContent = "Salvando ações…";
+        statusBadge.dataset.state = "busy";
         const weekId = await withWeekId(clientId, referenceDate);
-        await database.from("actions").delete().eq("week_id", weekId);
-        if (values.length) {
-          const result = await database.from("actions").insert(values.map((value, position) => ({
-            week_id: weekId,
-            title: value.title,
-            details: value.meta || "",
-            done: Boolean(value.done),
-            position,
-          })));
-          if (result.error) throw result.error;
+        const known = knownActions.get(queueKey) || [];
+        // Ação sem id criada antes da resposta do banco: reaproveita o id já gravado na mesma posição.
+        const claimed = new Set(snapshot.map((action) => action.id).filter(Boolean));
+        snapshot.forEach((action) => {
+          if (action.id) return;
+          const match = known.find((item) => item.position === action.position && item.title === action.title && !claimed.has(item.id))
+            || known.find((item) => item.title === action.title && !claimed.has(item.id));
+          if (match) { action.id = match.id; claimed.add(match.id); }
+        });
+        const removedIds = known.map((item) => item.id).filter((id) => !claimed.has(id));
+        if (removedIds.length) {
+          const removed = await database.from("actions").delete().eq("week_id", weekId).in("id", removedIds);
+          if (removed.error) throw removed.error;
         }
-      } catch (error) { console.error(error); statusBadge.textContent = "Erro ao salvar"; }
+        for (const action of snapshot) {
+          const row = {
+            week_id: weekId,
+            title: action.title,
+            details: action.details,
+            done: action.done,
+            position: action.position,
+          };
+          if (action.id) {
+            const updated = await database.from("actions")
+              .update(row)
+              .eq("id", action.id)
+              .eq("week_id", weekId);
+            if (updated.error) throw updated.error;
+          } else {
+            const inserted = await database.from("actions")
+              .insert(row)
+              .select("id")
+              .single();
+            if (inserted.error) throw inserted.error;
+            action.id = inserted.data.id;
+          }
+        }
+        knownActions.set(queueKey, snapshot.map((action) => ({ id: action.id, title: action.title, position: action.position })));
+        statusBadge.textContent = "Ações salvas";
+        statusBadge.dataset.state = "ok";
+        return snapshot.map((action) => ({
+          id: action.id,
+          title: action.title,
+          meta: action.details,
+          done: action.done,
+        }));
+      });
+      actionSaveQueues.set(queueKey, queued);
+      try {
+        return await queued;
+      } catch (error) {
+        console.error(error);
+        statusBadge.textContent = "Erro ao salvar ações";
+        statusBadge.dataset.state = "error";
+        throw error;
+      }
     },
     saveNote(clientId, referenceDate, notes) {
       clearTimeout(noteTimer);
@@ -493,11 +599,19 @@
     async saveCreativeLink(clientId, referenceDate, instagramUrl) {
       const weekId = await withWeekId(clientId, referenceDate);
       const existing = await database.from("creatives").select("storage_path").eq("week_id", weekId).maybeSingle();
+      if (existing.error) throw existing.error;
       if (!instagramUrl && !existing.data?.storage_path) {
-        await database.from("creatives").delete().eq("week_id", weekId);
+        const removed = await database.from("creatives").delete().eq("week_id", weekId);
+        if (removed.error) throw removed.error;
         return;
       }
-      await database.from("creatives").upsert({ week_id: weekId, instagram_url: instagramUrl || null, storage_path: existing.data?.storage_path || null }, { onConflict: "week_id" });
+      const saved = await database.from("creatives").upsert({
+        week_id: weekId,
+        instagram_url: instagramUrl || null,
+        storage_path: existing.data?.storage_path || null,
+      }, { onConflict: "week_id" }).select("id,instagram_url").single();
+      if (saved.error) throw saved.error;
+      return saved.data;
     },
     async uploadCreative(clientId, referenceDate, file) {
       const weekId = await withWeekId(clientId, referenceDate);
@@ -517,6 +631,40 @@
       } else {
         await database.from("creatives").delete().eq("week_id", weekId);
       }
+    },
+    async importHistoricalData(clientId, platform, batches) {
+      statusBadge.textContent = "Importando histórico…";
+      statusBadge.dataset.state = "busy";
+      let metrics = 0;
+      for (const batch of batches) {
+        let weekId = weekIds.get(`${clientId}:${batch.key}`);
+        if (!weekId) {
+          const weekResult = await database.from("weeks").upsert({
+            client_id: clientId,
+            reference_date: batch.key,
+            source: "historical",
+          }, { onConflict: "client_id,reference_date" }).select("id").single();
+          if (weekResult.error) throw weekResult.error;
+          weekId = weekResult.data.id;
+          weekIds.set(`${clientId}:${batch.key}`, weekId);
+        }
+        const rows = Object.entries(batch[platform] || {})
+          .filter(([, value]) => Number.isFinite(value))
+          .map(([metric_key, value]) => ({ week_id: weekId, platform, metric_key, value }));
+        if (!rows.length) continue;
+        const result = await database.from("weekly_metrics").upsert(rows, {
+          onConflict: "week_id,platform,metric_key",
+          ignoreDuplicates: true,
+        });
+        if (result.error) throw result.error;
+        metrics += rows.length;
+      }
+      statusBadge.textContent = "Banco conectado";
+      statusBadge.dataset.state = "ok";
+      return { weeks: batches.length, metrics };
+    },
+    async importHistoricalMeta(clientId, batches) {
+      return this.importHistoricalData(clientId, "meta", batches);
     },
     async deleteWeek(clientId, referenceDate) {
       const weekId = await withWeekId(clientId, referenceDate);

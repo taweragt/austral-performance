@@ -57,7 +57,7 @@ function effectiveMetrics(platform,date=selected){
  const defaults=defaultMetrics(platform),versions=metricVersions(platform).filter(v=>v.from<=date).sort((a,b)=>a.from.localeCompare(b.from)),keys=versions.at(-1)?.keys||defaults.map(m=>m.key),catalog=metricCatalogFor(platform);
  return keys.map(metricKey=>defaults.find(m=>m.key===metricKey)||catalog.find(m=>m.key===metricKey)).filter(Boolean);
 }
-const importedKey=(clientId=client)=>`performance-v2-imported-${clientId}`,pendingImportedKey=(clientId=client)=>`performance-v2-imported-pending-${clientId}`;
+const importedKey=(clientId=client)=>`performance-v2-imported-${clientId}`,pendingImportedKey=(clientId=client)=>`performance-v2-imported-pending-${clientId}`,metricEditKey=(clientId=client)=>`performance-v2-metric-edits-${clientId}`,creativeLinkPendingKey=(clientId=client)=>`performance-v2-creative-links-pending-${clientId}`;
 function imported(clientId=client){let x=json(importedKey(clientId),[]);if(clientId==="4medic"&&!x.length)x=json("4medic-v2-imported-weeks",[]);return Array.isArray(x)?x.filter(v=>!v.testOnly):[]}
 function storeImported(list,clientId=client){localStorage.setItem(importedKey(clientId),JSON.stringify(list))}
 function pendingImported(clientId=client){const raw=localStorage.getItem(pendingImportedKey(clientId));if(raw===null)return imported(clientId).map(item=>item.key);const value=json(pendingImportedKey(clientId),[]);return Array.isArray(value)?[...new Set(value.filter(Boolean))]:[]}
@@ -65,18 +65,42 @@ function storePendingImported(keys,clientId=client){localStorage.setItem(pending
 function queueImported(item,clientId=client){const data=imported(clientId).filter(x=>x.key!==item.key);data.push(item);storeImported(data,clientId);storePendingImported([...pendingImported(clientId),item.key],clientId)}
 function markImportedSynced(weekKey,clientId=client){storePendingImported(pendingImported(clientId).filter(key=>key!==weekKey),clientId)}
 function removeImported(weekKey,clientId=client){storeImported(imported(clientId).filter(x=>x.key!==weekKey),clientId);markImportedSynced(weekKey,clientId)}
-function mergeWeek(list,item){const data=list.filter(x=>x.key!==item.key);data.push(item);return data}
-function loadWeeks(){const extras=imported();weeks=[...clients[client].weeks,...extras].reduce((a,x)=>{const i=a.findIndex(v=>v.key===x.key);i<0?a.push(x):a[i]=x;return a},[]).sort((a,b)=>a.key.localeCompare(b.key));if(!weeks.some(x=>x.key===selected))selected=weeks.at(-1)?.key||"";if(selected)localStorage.setItem(selectedStorageKey(client),selected);else localStorage.removeItem(selectedStorageKey(client))}
+// Atualiza métricas da semana sem descartar o que só existe no banco (ações, nota, peça).
+function mergeWeek(list,item){const existing=list.find(x=>x.key===item.key),data=list.filter(x=>x.key!==item.key);data.push(existing?{...existing,...item,actions:existing.actions?.length?existing.actions:(item.actions||[]),note:existing.note||item.note||"",creative:existing.creative??item.creative??null}:item);return data}
+function cacheWeek(item,clientId=client){storeImported(mergeWeek(imported(clientId),item),clientId);if(localStorage.getItem(pendingImportedKey(clientId))===null)storePendingImported([],clientId)}
+function pendingMetricEdits(clientId=client){const value=json(metricEditKey(clientId),[]);return Array.isArray(value)?value:[]}
+function storeMetricEdits(values,clientId=client){localStorage.setItem(metricEditKey(clientId),JSON.stringify(values))}
+function queueMetricEdit(edit,clientId=client){storeMetricEdits([...pendingMetricEdits(clientId).filter(item=>!(item.weekKey===edit.weekKey&&item.platform===edit.platform&&item.metricKey===edit.metricKey)),edit],clientId)}
+function removeMetricEdit(edit,clientId=client){storeMetricEdits(pendingMetricEdits(clientId).filter(item=>!(item.weekKey===edit.weekKey&&item.platform===edit.platform&&item.metricKey===edit.metricKey)),clientId)}
+function pendingCreativeLinks(clientId=client){const value=json(creativeLinkPendingKey(clientId),[]);return Array.isArray(value)?value:[]}
+function storePendingCreativeLinks(values,clientId=client){localStorage.setItem(creativeLinkPendingKey(clientId),JSON.stringify(values))}
+function queueCreativeLink(weekKey,value,clientId=client){storePendingCreativeLinks([...pendingCreativeLinks(clientId).filter(item=>item.weekKey!==weekKey),{weekKey,value}],clientId)}
+function removePendingCreativeLink(weekKey,clientId=client){storePendingCreativeLinks(pendingCreativeLinks(clientId).filter(item=>item.weekKey!==weekKey),clientId)}
+function pendingCreativeLink(weekKey=selected,clientId=client){return pendingCreativeLinks(clientId).find(item=>item.weekKey===weekKey)?.value}
+// Com o banco conectado, a semana do banco prevalece; o cache local só entra para datas que o banco não tem.
+function loadWeeks(){const base=clients[client].weeks,cached=imported(),extras=window.performanceDb?.ready?cached.filter(x=>!base.some(w=>w.key===x.key)):cached,now=new Date(),today=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;weeks=[...base,...extras].reduce((a,x)=>{const i=a.findIndex(v=>v.key===x.key);i<0?a.push(x):a[i]=x;return a},[]).filter(item=>item.key<=today).sort((a,b)=>a.key.localeCompare(b.key));if(!weeks.some(x=>x.key===selected))selected=weeks.at(-1)?.key||"";if(selected)localStorage.setItem(selectedStorageKey(client),selected);else localStorage.removeItem(selectedStorageKey(client))}
 async function syncPendingImports(){
  if(!window.performanceDb?.ready)return{synced:0,pending:0};
  let synced=0,pending=0;
  for(const clientId of Object.keys(clients)){
-  const cached=imported(clientId);cached.forEach(item=>{clients[clientId].weeks=mergeWeek(clients[clientId].weeks,item)});
-  for(const weekKey of pendingImported(clientId)){
+  // Cache só preenche datas ausentes no banco; semanas pendentes atualizam métricas preservando ações e notas do banco.
+  const cached=imported(clientId),pendingKeys=pendingImported(clientId);
+  cached.forEach(item=>{const inDb=clients[clientId].weeks.some(week=>week.key===item.key);if(!inDb||pendingKeys.includes(item.key))clients[clientId].weeks=mergeWeek(clients[clientId].weeks,item)});
+  for(const weekKey of pendingKeys){
    const item=cached.find(value=>value.key===weekKey);
    if(!item){markImportedSynced(weekKey,clientId);continue}
    try{await window.performanceDb.saveWeek(clientId,item);markImportedSynced(item.key,clientId);synced++}
    catch(error){console.error(`Não foi possível sincronizar ${clientId}/${item.key}:`,error);pending++}
+  }
+  for(const edit of pendingMetricEdits(clientId)){
+   const week=clients[clientId].weeks.find(item=>item.key===edit.weekKey)||cached.find(item=>item.key===edit.weekKey);
+   if(!week){removeMetricEdit(edit,clientId);continue}
+   try{await window.performanceDb.saveMetricValue(clientId,week,edit.platform,edit.metricKey,edit.value);removeMetricEdit(edit,clientId);week[edit.platform]={...(week[edit.platform]||{}),[edit.metricKey]:edit.value};synced++}
+   catch(error){console.error(`Não foi possível sincronizar a métrica ${clientId}/${edit.weekKey}/${edit.metricKey}:`,error);pending++}
+  }
+  for(const pendingLink of pendingCreativeLinks(clientId)){
+   try{await window.performanceDb.saveCreativeLink(clientId,pendingLink.weekKey,pendingLink.value);removePendingCreativeLink(pendingLink.weekKey,clientId);synced++}
+   catch(error){console.error(`Não foi possível sincronizar a peça ${clientId}/${pendingLink.weekKey}:`,error);pending++}
   }
  }
  return{synced,pending};
@@ -116,7 +140,7 @@ function delta(cur,prev,m){
  const cls=Math.abs(pct)<.05?"neutral":(m.inverse?pct<0:pct>0)?"good":"bad";
  return`<em class="delta ${cls}" title="Anterior: ${fmt(prev,m.format)}">${pct>0?"↑":pct<0?"↓":"→"} ${Math.abs(pct).toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1})}%</em>`;
 }
-function metrics(el,defs,cur={},prev={}){el.innerHTML=defs.map(m=>`<div class="metric-row${m.big?" emphasis":""}"><span>${m.label}</span><strong>${fmt(cur?.[m.key],m.format)}</strong>${delta(cur?.[m.key],prev?.[m.key],m)}</div>`).join("")}
+function metrics(el,defs,cur={},prev={},platform){const editable=periodMode==="week";el.innerHTML=defs.map(m=>`<div class="metric-row${m.big?" emphasis":""}${editable?" editable":""}"><span>${m.label}</span><strong>${fmt(cur?.[m.key],m.format)}</strong>${delta(cur?.[m.key],prev?.[m.key],m)}${editable?`<button class="metric-value-edit" type="button" data-platform="${platform}" data-metric="${m.key}" aria-label="Editar valor de ${esc(m.label)}" title="Editar valor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L8 18l-4 1 1-4z"/></svg></button>`:""}</div>`).join("");el.querySelectorAll(".metric-value-edit").forEach(button=>button.onclick=()=>openMetricValueEditor(button.dataset.platform,button.dataset.metric))}
 function health(defs,cur,prev){let score=0,n=0;defs.filter(m=>!m.arrow).forEach(m=>{const v=variation(cur?.[m.key],prev?.[m.key]);if(v===null)return;n++;if(Math.abs(v)<.05)return;score+=(m.inverse?v<0:v>0)?1:-1});return!n?{text:"Sem comparação",cls:"neutral"}:score>0?{text:"Melhorou",cls:"good"}:score<0?{text:"Piorou",cls:"bad"}:{text:"Estável",cls:"neutral"}}
 function setHealth(id,h){$(id).textContent=h.text;$(id).className=`platform-health ${h.cls}`}
 const compact=n=>n>=1000?`R$ ${(n/1000).toLocaleString("pt-BR",{maximumFractionDigits:1})} mil`:brl(n);
@@ -255,11 +279,11 @@ function updateAccessButton(){
 }
 window.updateAccessButton=updateAccessButton;
 function showOverview(){
- appView="overview";localStorage.setItem(viewStorageKey,appView);$("overview").hidden=false;$("resumo").hidden=true;document.querySelector(".page-footer").hidden=true;document.querySelector(".skip-link").href="#overview";document.querySelector(".brand").href="#overview";$("overview-open").setAttribute("aria-pressed","true");document.querySelectorAll(".budget-strip,#week-select,.period-toggle,#history-open,#import-open,#budget-open-mobile").forEach(el=>{if(el)el.closest("label")?el.closest("label").hidden=true:el.hidden=true});
+ appView="overview";localStorage.setItem(viewStorageKey,appView);$("overview").hidden=false;$("resumo").hidden=true;document.querySelector(".page-footer").hidden=true;document.querySelector(".skip-link").href="#overview";document.querySelector(".brand").href="#overview";$("overview-open").setAttribute("aria-pressed","true");document.querySelectorAll(".budget-strip,#week-select,.period-toggle,#history-open,#import-open,#history-import-open,#budget-open-mobile").forEach(el=>{if(el)el.closest("label")?el.closest("label").hidden=true:el.hidden=true});
  document.querySelector(".brand-mark").innerHTML='<img src="./logo-austral.jpg" alt="Logo Austral">';document.querySelector(".brand-copy strong").textContent="Austral";document.querySelector(".brand-copy small").textContent="Visão geral de performance";document.title="Austral | Visão geral";if($("client-select"))$("client-select").value="__austral__";renderOverview();updateAccessButton();
 }
 function openClient(clientId=client){
- if(clients[clientId])client=clientId;localStorage.setItem("performance-v2-client",client);appView="client";localStorage.setItem(viewStorageKey,appView);$("overview").hidden=true;$("resumo").hidden=false;document.querySelector(".page-footer").hidden=false;document.querySelector(".skip-link").href="#resumo";document.querySelector(".brand").href="#resumo";$("overview-open").setAttribute("aria-pressed","false");document.querySelectorAll(".budget-strip,#week-select,.period-toggle,#history-open,#import-open,#budget-open-mobile").forEach(el=>{if(el)el.closest("label")?el.closest("label").hidden=false:el.hidden=false});$("client-select").value=client;selected=localStorage.getItem(selectedStorageKey(client))||"";loadWeeks();render();updateAccessButton();
+ if(clients[clientId])client=clientId;localStorage.setItem("performance-v2-client",client);appView="client";localStorage.setItem(viewStorageKey,appView);$("overview").hidden=true;$("resumo").hidden=false;document.querySelector(".page-footer").hidden=false;document.querySelector(".skip-link").href="#resumo";document.querySelector(".brand").href="#resumo";$("overview-open").setAttribute("aria-pressed","false");document.querySelectorAll(".budget-strip,#week-select,.period-toggle,#history-open,#import-open,#history-import-open,#budget-open-mobile").forEach(el=>{if(el)el.closest("label")?el.closest("label").hidden=false:el.hidden=false});$("client-select").value=client;selected=localStorage.getItem(selectedStorageKey(client))||"";loadWeeks();render();updateAccessButton();
 }
 function weekOptions(){$("week-select").replaceChildren(...weeks.slice().reverse().map(w=>Object.assign(document.createElement("option"),{value:w.key,textContent:w.date})));$("week-select").value=selected}
 function brand(){
@@ -296,15 +320,15 @@ const esc=s=>{const d=document.createElement("div");d.textContent=String(s??"");
 function renderActions(cur){
  const saved=window.performanceDb?.ready?null:json(key(`actions-${selected}`),null);actions=saved||(cur.actions||[]).map(action=>Array.isArray(action)?{title:action[0],meta:action[1],done:false}:{...action});
  $("action-list").innerHTML=actions.length?actions.map((a,i)=>`<label class="action-item"><input type="checkbox" data-i="${i}" ${a.done?"checked":""}><span class="check-box"></span><span><strong>${esc(a.title)}</strong><small>${esc(a.meta||"Prazo a definir")}</small></span></label>`).join(""):'<p class="empty-actions">Nenhuma ação registrada nesta semana.</p>';
- $("action-list").querySelectorAll("input").forEach(i=>i.onchange=()=>{actions[+i.dataset.i].done=i.checked;saveActions()});pending();
+ $("action-list").querySelectorAll("input").forEach(i=>i.onchange=async()=>{const index=+i.dataset.i,previous=actions[index].done,targetClient=client,targetDate=selected,snapshot=actions.map(action=>({...action}));snapshot[index].done=i.checked;actions=snapshot;const cur=active();if(cur)cur.actions=snapshot.map(action=>({...action}));pending();try{const persisted=await saveActions(targetClient,targetDate,snapshot);if(client===targetClient&&selected===targetDate)persisted.forEach((saved,position)=>{const current=actions[position];if(current&&!current.id&&current.title===saved.title)current.id=saved.id})}catch{if(client===targetClient&&selected===targetDate){actions[index].done=previous;const current=active();if(current)current.actions=actions.map(action=>({...action}));renderActions(current)}}});pending();
 }
-function saveActions(){localStorage.setItem(key(`actions-${selected}`),JSON.stringify(actions));const cur=active();if(cur)cur.actions=actions.map(action=>({...action}));window.performanceDb?.saveActions(client,selected,actions);pending()}
+async function saveActions(targetClient=client,targetDate=selected,nextActions=actions){const snapshot=nextActions.map(action=>({...action}));localStorage.setItem(`performance-v2-actions-${targetDate}-${targetClient}`,JSON.stringify(snapshot));const targetWeek=clients[targetClient]?.weeks.find(week=>week.key===targetDate);if(targetWeek)targetWeek.actions=snapshot.map(action=>({...action}));if(client===targetClient&&selected===targetDate)pending();if(!window.performanceDb?.ready)return snapshot;const persisted=await window.performanceDb.saveActions(targetClient,targetDate,snapshot);if(targetWeek)targetWeek.actions=persisted.map(action=>({...action}));return persisted}
 function pending(){const n=actions.filter(x=>!x.done).length;$("pending-count").textContent=`${n} ${n===1?"pendente":"pendentes"}`}
 function render(){
  const c=clients[client],rawCur=active(),rawPrev=previous(),metaDefs=effectiveMetrics("meta"),googleDefs=c.google?effectiveMetrics("google"):[];if(!rawCur)return;
  const{cur,prev}=periodViewFor(rawCur,rawPrev);
- brand();weekOptions();metrics($("meta-metrics"),metaDefs,cur.meta,prev?.meta);
- if(c.google)metrics($("google-metrics"),googleDefs,cur.google||{},prev?.google||{});status(cur,prev);renderActions(rawCur);
+ brand();weekOptions();metrics($("meta-metrics"),metaDefs,cur.meta,prev?.meta,"meta");
+ if(c.google)metrics($("google-metrics"),googleDefs,cur.google||{},prev?.google||{},"google");status(cur,prev);renderActions(rawCur);
  $("quick-notes").value=window.performanceDb?.ready?(rawCur.note||""):(localStorage.getItem(key(`notes-${selected}`))||rawCur.note||"");
  const sourceLabel=periodMode==="month"?"Consolidado do mês":(rawCur.source==="csv"||rawCur.period?"CSV semanal":"Registro do documento");
  $("meta-source-label").textContent=sourceLabel;if(c.google)$("google-source-label").textContent=sourceLabel;
@@ -321,7 +345,7 @@ function history(){
 }
 
 const creativeKey=kind=>key(`${kind}-${selected}`);
-function adLink(){return window.performanceDb?.ready?active()?.creative?.instagram_url||"":localStorage.getItem(creativeKey("ad"))||""}
+function adLink(){const pending=pendingCreativeLink(),saved=localStorage.getItem(creativeKey("ad"))||"";return pending!==undefined?pending:(active()?.creative?.instagram_url||saved)}
 function embed(url){const m=url.match(/instagram\.com\/(p|reel)\/([^/?#]+)/i);return m?`https://www.instagram.com/${m[1]}/${m[2]}/embed/captioned/`:""}
 function renderCreative(){
  const link=adLink(),image=window.performanceDb?.ready?active()?.creative?.signedUrl:localStorage.getItem(creativeKey("creative")),frame=$("instagram-frame"),manual=$("manual-creative"),fallback=$("ad-preview-link"),e=embed(link);
@@ -332,6 +356,31 @@ function renderCreative(){
 
 const norm=s=>String(s??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^\p{L}\p{N}]+/gu," ").trim();
 function numeric(v){let s=String(v??"").trim().replace(/[R$\s%]/g,"");if(!s||s==="—")return null;if(s.includes(",")&&s.includes("."))s=s.lastIndexOf(",")>s.lastIndexOf(".")?s.replace(/\./g,"").replace(",","."):s.replace(/,/g,"");else if(s.includes(","))s=s.replace(/\./g,"").replace(",",".");const n=Number(s);return Number.isFinite(n)?n:null}
+let editingMetricValue=null;
+function metricDefinitionFor(platform,metricKey){return effectiveMetrics(platform).find(metric=>metric.key===metricKey)||metricCatalogFor(platform).find(metric=>metric.key===metricKey)}
+function openMetricValueEditor(platform,metricKey){
+ if(periodMode!=="week")return;
+ const week=active(),definition=metricDefinitionFor(platform,metricKey);if(!week||!definition)return;
+ editingMetricValue={clientId:client,weekKey:week.key,platform,metricKey,format:definition.format};
+ $("metric-value-title").textContent=`Editar ${definition.label}`;
+ $("metric-value-scope").textContent=`${clients[client].name} · ${week.date} · ${platform==="google"?"Google Ads":"Meta e Instagram"}`;
+ $("metric-value-label").textContent=definition.label;
+ const value=week[platform]?.[metricKey];$("metric-value-input").value=Number.isFinite(value)?String(value).replace(".",","):"";
+ $("metric-value-feedback").textContent="A alteração vale somente para esta semana.";$("metric-value-feedback").className="budget-feedback";
+ $("metric-value-dialog").showModal();setTimeout(()=>$("metric-value-input").focus(),0);
+}
+async function persistMetricValue(value){
+ if(!editingMetricValue)return;
+ const edit={...editingMetricValue,value},week=weeks.find(item=>item.key===edit.weekKey);if(!week)return;
+ week[edit.platform]=week[edit.platform]||{};week[edit.platform][edit.metricKey]=value;
+ clients[edit.clientId].weeks=mergeWeek(clients[edit.clientId].weeks,week);cacheWeek(week,edit.clientId);queueMetricEdit(edit,edit.clientId);render();
+ const feedback=$("metric-value-feedback");feedback.textContent="Valor salvo neste navegador. Sincronizando…";feedback.className="budget-feedback";
+ if(!window.performanceDb?.ready){feedback.textContent="Valor salvo neste navegador. A sincronização ocorrerá quando o banco reconectar.";return}
+ try{await window.performanceDb.saveMetricValue(edit.clientId,week,edit.platform,edit.metricKey,value);removeMetricEdit(edit,edit.clientId);feedback.textContent="Valor atualizado no Supabase.";feedback.className="budget-feedback success";setTimeout(()=>$("metric-value-dialog").close(),650)}
+ catch(error){console.error(error);feedback.textContent="Valor salvo neste navegador. O envio ao Supabase ficou pendente e será tentado novamente.";feedback.className="budget-feedback error"}
+}
+async function saveMetricValue(event){event.preventDefault();const submit=event.currentTarget.querySelector('[type="submit"]'),value=numeric($("metric-value-input").value),feedback=$("metric-value-feedback");if(value===null||value<0){feedback.textContent="Informe um número igual ou maior que zero.";feedback.className="budget-feedback error";$("metric-value-input").focus();return}submit.disabled=true;try{await persistMetricValue(value)}finally{submit.disabled=false}}
+async function clearMetricValue(){const button=$("metric-value-clear");button.disabled=true;try{await persistMetricValue(null);$("metric-value-input").value=""}finally{button.disabled=false}}
 function csv(text){
  const lines=text.replace(/^\uFEFF/,""),first=lines.split(/\r?\n/).find(Boolean)||"",sep=(first.match(/;/g)||[]).length>(first.match(/,/g)||[]).length?";":",",rows=[];let row=[],cell="",quote=false;
  for(let i=0;i<lines.length;i++){const ch=lines[i];if(ch==='"'){if(quote&&lines[i+1]==='"'){cell+='"';i++}else quote=!quote}else if(ch===sep&&!quote){row.push(cell);cell=""}else if((ch==="\n"||ch==="\r")&&!quote){if(ch==="\r"&&lines[i+1]==="\n")i++;row.push(cell);if(row.some(x=>x.trim()))rows.push(row);row=[];cell=""}else cell+=ch}row.push(cell);if(row.some(x=>x.trim()))rows.push(row);
@@ -340,13 +389,47 @@ function csv(text){
 function pick(row,names){for(const n of names){if(Object.hasOwn(row,n)&&row[n]!=="")return row[n]}for(const n of names){const k=Object.keys(row).find(x=>x.includes(n));if(k&&row[k]!=="")return row[k]}return""}
 function metaAggregate(rows){
  const x={lead:0,leadSpend:0,messages:0,messageSpend:0,spend:0,visits:0,trafficSpend:0,clicks:0,profile:0,webinar:0,webinarSpend:0,cadastro:0,cadastroSpend:0};let hasLead=false,hasMessages=false,hasTraffic=false;
- rows.forEach(r=>{const campaign=norm(pick(r,["nome da campanha","campanha","campaign"])),type=norm(pick(r,["tipo de resultado","result type"]));if(!campaign||/^total/.test(campaign))return;const result=numeric(pick(r,["resultados","results","conversoes","conversions"]))||0,spend=numeric(pick(r,["valor usado","valor gasto","amount spent","custo","cost"]))||0,lp=numeric(pick(r,["visualizacoes da pagina de destino","landing page views"]))||0,profile=numeric(pick(r,["visitas ao perfil","profile visits"]))||0,clicks=numeric(pick(r,["cliques no link","link clicks","cliques","clicks"]))||0,text=`${campaign} ${type}`,follower=/seguidor|follower/.test(text),message=/mensag|whatsapp|conversa|conversation|messaging/.test(text),tra=/trafego|traffic|visita|perfil|landing|pagina de destino/.test(text),lead=!follower&&!message&&/lead|cadastro|captacao|formulario|form|webinar|conversao/.test(text);x.spend+=spend;
+ rows.forEach(r=>{const campaign=norm(pick(r,["nome da campanha","campanha","campaign"])),type=norm(pick(r,["tipo de resultado","indicador de resultados","result type","result indicator"]));if(!campaign||/^total/.test(campaign))return;const result=numeric(pick(r,["resultados","results","conversoes","conversions"]))||0,spend=numeric(pick(r,["valor usado","valor gasto","amount spent","custo","cost"]))||0,lp=numeric(pick(r,["visualizacoes da pagina de destino","landing page views"]))||0,profile=numeric(pick(r,["visitas ao perfil","profile visits"]))||0,profileResult=/profile.?visit|visita.?perfil/.test(type)?result:0,clicks=numeric(pick(r,["cliques no link","link clicks","cliques","clicks"]))||0,text=`${campaign} ${type}`,follower=/seguidor|follower/.test(text),message=/mensag|whatsapp|conversa|conversation|messaging/.test(text),tra=/trafego|traffic|visita|perfil|landing|pagina de destino|profile.?visit/.test(text),lead=!follower&&!message&&/lead|cadastro|captacao|formulario|form|webinar|conversao/.test(text);x.spend+=spend;
   if(message){x.messages+=result;x.messageSpend+=spend;hasMessages=true}
   if(lead){x.lead+=result;x.leadSpend+=spend;hasLead=true;if(/webinar/.test(campaign)){x.webinar+=result;x.webinarSpend+=spend}if(/cadastro/.test(campaign)){x.cadastro+=result;x.cadastroSpend+=spend}}
-  if(tra||lp||profile){x.visits+=lp||profile||result;x.profile+=profile;x.clicks+=clicks;x.trafficSpend+=spend;hasTraffic=true}
+  if(tra||lp||profile||profileResult){x.visits+=lp||profile||profileResult||result;x.profile+=profile||profileResult;x.clicks+=clicks;x.trafficSpend+=spend;hasTraffic=true}
  });
  const results=x.lead+x.messages,resultSpend=x.leadSpend+x.messageSpend;
  return{results:hasLead||hasMessages?results:null,costPerResult:results?resultSpend/results:null,leads:hasLead?x.lead:null,cpl:hasLead&&x.lead?x.leadSpend/x.lead:null,messages:hasMessages?x.messages:null,costPerMessage:hasMessages&&x.messages?x.messageSpend/x.messages:null,spend:x.spend||null,visits:hasTraffic?x.visits:null,costVisit:hasTraffic&&x.visits?x.trafficSpend/x.visits:null,clicks:x.clicks||null,profileVisits:x.profile||null,webinarLeads:x.webinar||null,webinarCpl:x.webinar?x.webinarSpend/x.webinar:null,cadastroLeads:x.cadastro||null,cadastroCpl:x.cadastro?x.cadastroSpend/x.cadastro:null};
+}
+let historyImportPreview=null;
+function mondayFromIso(value){const date=new Date(`${value}T12:00:00`);if(Number.isNaN(date.getTime()))return null;date.setDate(date.getDate()-((date.getDay()+6)%7));return localIsoDate(date)}
+function csvWithHeaders(text,required){
+ const lines=text.replace(/^\uFEFF/,""),first=lines.split(/\r?\n/).find(Boolean)||"",sep=(first.match(/;/g)||[]).length>(first.match(/,/g)||[]).length?";":",",rows=[];let row=[],cell="",quote=false;
+ for(let i=0;i<lines.length;i++){const ch=lines[i];if(ch==='"'){if(quote&&lines[i+1]==='"'){cell+='"';i++}else quote=!quote}else if(ch===sep&&!quote){row.push(cell);cell=""}else if((ch==="\n"||ch==="\r")&&!quote){if(ch==="\r"&&lines[i+1]==="\n")i++;row.push(cell);if(row.some(x=>x.trim()))rows.push(row);row=[];cell=""}else cell+=ch}row.push(cell);if(row.some(x=>x.trim()))rows.push(row);
+ const hi=rows.findIndex(r=>required.every(header=>r.map(norm).includes(header)));if(hi<0)throw Error(`Não encontrei as colunas: ${required.join(", ")}.`);const heads=rows[hi].map(norm);return rows.slice(hi+1).map(r=>Object.fromEntries(heads.map((h,i)=>[h,r[i]??""]))).filter(r=>Object.values(r).some(Boolean));
+}
+function historicalMetaPreview(rows){
+ const now=new Date(),today=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`,grouped=new Map();
+ rows.forEach(row=>{const date=pick(row,["inicio dos relatorios","reporting starts","report start","date"]);if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;const key=mondayFromIso(date);if(!key||key>today)return;const current=grouped.get(key)||[];current.push(row);grouped.set(key,current)});
+ const items=[];
+ grouped.forEach((weekRows,key)=>{const meta=metaAggregate(weekRows),existing=clients[client].weeks.find(week=>week.key===key),missing={};Object.entries(meta).forEach(([metric,value])=>{if(Number.isFinite(value)&&!Number.isFinite(existing?.meta?.[metric]))missing[metric]=value});if(Object.keys(missing).length)items.push({key,meta:missing,days:new Set(weekRows.map(row=>pick(row,["inicio dos relatorios","reporting starts","report start","date"]))).size})});
+ return items.sort((a,b)=>a.key.localeCompare(b.key));
+}
+function mergeHistoricalMeta(existing,incoming){const item=existing?{...existing,meta:{...(existing.meta||{})}}:W(incoming.key,{},null,[]);Object.entries(incoming.meta).forEach(([metric,value])=>{if(!Number.isFinite(item.meta[metric]))item.meta[metric]=value});item.source=existing?.source||"historical";return item}
+function historicalGooglePreview(dailyRows,conversionRows){
+ const now=new Date(),today=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`,grouped=new Map(),add=(date,fn)=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;const key=mondayFromIso(date);if(!key||key>today)return;const current=grouped.get(key)||{clicks:0,spend:0,leads:0,newSubscribers:0,days:new Set()};fn(current);current.days.add(date);grouped.set(key,current)};
+ dailyRows.forEach(row=>add(pick(row,["dia","date"]),item=>{item.clicks+=numeric(pick(row,["cliques","clicks"]))||0;item.spend+=numeric(pick(row,["custo","cost"]))||0}));
+ conversionRows.forEach(row=>add(pick(row,["dia","date"]),item=>{const action=norm(pick(row,["acao de conversao","conversion action"])),value=numeric(pick(row,["conversoes","conversions"]))||0;if(/youtube|inscri|subscriber/.test(action))item.newSubscribers+=value;else item.leads+=value}));
+ const items=[];grouped.forEach((data,key)=>{const existing=clients[client].weeks.find(week=>week.key===key),google={},values={clicks:data.clicks,spend:data.spend,leads:data.leads,newSubscribers:data.newSubscribers};Object.entries(values).forEach(([metric,value])=>{if(Number.isFinite(value)&&!Number.isFinite(existing?.google?.[metric]))google[metric]=value});if(Object.keys(google).length)items.push({key,google,days:data.days.size})});return items.sort((a,b)=>a.key.localeCompare(b.key));
+}
+function mergeHistoricalGoogle(existing,incoming){const item=existing?{...existing,google:{...(existing.google||{})}}:W(incoming.key,{}, {},[]);Object.entries(incoming.google).forEach(([metric,value])=>{if(!Number.isFinite(item.google[metric]))item.google[metric]=value});item.source=existing?.source||"historical";return item}
+async function importHistoricalCsv(){
+ const feedback=$("history-preview"),preview=historyImportPreview,metaFile=$("history-meta-csv").files[0],googleDaily=$("history-google-daily-csv").files[0],googleConversions=$("history-google-conversions-csv").files[0];
+ if(!preview)throw new Error("Selecione os CSVs e aguarde a prévia.");
+ if(Boolean(googleDaily)!==Boolean(googleConversions))throw new Error("Para o Google, selecione os dois CSVs: diário e conversões.");
+ const metaItems=preview.meta||[],googleItems=preview.google||[];
+ if(!metaFile&&!googleDaily)throw new Error("Selecione ao menos um CSV histórico.");
+ if(!metaItems.length&&!googleItems.length){feedback.textContent="Não há métricas ausentes nos CSVs selecionados para este cliente.";return}
+ if(!window.performanceDb?.ready)throw new Error("Conecte-se ao Supabase antes de importar o histórico.");
+ if(!confirm(`Importar o histórico e preencher somente métricas ausentes?`))return;
+ const submit=$("import-submit");submit.disabled=true;feedback.textContent="Importando histórico…";
+ try{let metrics=0,weeks=new Set();if(metaItems.length){const result=await window.performanceDb.importHistoricalData(client,"meta",metaItems);metrics+=result.metrics;metaItems.forEach(incoming=>{const existing=clients[client].weeks.find(week=>week.key===incoming.key),merged=mergeHistoricalMeta(existing,incoming);clients[client].weeks=mergeWeek(clients[client].weeks,merged);cacheWeek(merged,client);weeks.add(incoming.key)})}if(googleItems.length){const result=await window.performanceDb.importHistoricalData(client,"google",googleItems);metrics+=result.metrics;googleItems.forEach(incoming=>{const existing=clients[client].weeks.find(week=>week.key===incoming.key),merged=mergeHistoricalGoogle(existing,incoming);clients[client].weeks=mergeWeek(clients[client].weeks,merged);cacheWeek(merged,client);weeks.add(incoming.key)})}loadWeeks();render();feedback.textContent=`Histórico importado: ${weeks.size} semanas e ${metrics} métricas enviadas. Valores existentes foram preservados.`;historyImportPreview=null;["history-meta-csv","history-google-daily-csv","history-google-conversions-csv"].forEach(id=>$(id).value="");$("history-meta-file-name").textContent="Selecionar outro CSV";$("history-google-daily-file-name").textContent="Cliques e custo por dia";$("history-google-conversions-file-name").textContent="Dia, ação de conversão e conversões"}finally{submit.disabled=false}
 }
 function googleAggregate(rows){
  let leads=0,newSubscribers=0,found=false,campaignSpend=0,accountSpend=null,searchTotal=null,demandTotal=null,searchLeads=0,demandLeads=0,demandHasFollower=false,demandRowSpend=0;const eligibleRows=[];
@@ -382,16 +465,25 @@ function saveMetricStrategy(event){
 const localIsoDate=date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
 function validateReportDate(value,todayValue=localIsoDate(new Date())){const date=new Date(`${value}T12:00:00`);if(!value||Number.isNaN(date.getTime()))throw new Error("Informe uma data válida para o relatório.");if(value>todayValue)throw new Error("A data do relatório não pode estar no futuro.");return value}
 function setupImport(){
+ $("import-dialog").dataset.mode="weekly";document.querySelectorAll(".weekly-import-field").forEach(field=>field.hidden=false);$("history-import-panel").hidden=true;$("meta-csv").required=true;$("import-submit").textContent="Criar semana";
  const c=clients[client];$("google-upload-card").hidden=!c.google;$("google-csv").required=c.google;$("followers-field").hidden=!c.followers;$("new-followers-input").required=c.followers;$("new-followers-input").min="";$("import-title").textContent=`Importar semana · ${c.name}`;
  $("import-description").textContent=c.google?"Envie os relatórios do Meta e do Google. Cada objetivo será separado automaticamente.":"Envie o relatório do Meta. Cada objetivo será separado automaticamente.";
  $("import-tip").textContent=c.google?"Exporte no nível de campanhas. No Google, Pesquisa e Geração de Demanda com origem Site entram como leads; inscritos do YouTube ficam separados.":"Exporte no nível de campanhas. Formulários, mensagens e conversas de WhatsApp são separados e também consolidados como resultados.";
  const today=localIsoDate(new Date());$("import-date").value=today;$("import-date").max=today;
  ["meta-csv","google-csv"].forEach(id=>$(id).value="");$("new-followers-input").value="";$("meta-file-name").textContent=$("google-file-name").textContent="Selecionar relatório semanal";$("import-feedback").textContent=c.google?"Envie os CSVs no nível de campanha.":"Envie o CSV do Meta no nível de campanha.";
 }
+function setupHistoryImport(){
+ const c=clients[client];historyImportPreview=null;$("import-dialog").dataset.mode="history";document.querySelectorAll(".weekly-import-field").forEach(field=>field.hidden=true);$("history-import-panel").hidden=false;$("meta-csv").required=false;$("google-csv").required=false;$("new-followers-input").required=false;$("import-title").textContent=`Importar histórico · ${c.name}`;$("import-description").textContent="Envie os relatórios diários disponíveis para consolidar as semanas passadas.";["history-meta-csv","history-google-daily-csv","history-google-conversions-csv"].forEach(id=>$(id).value="");$("history-meta-file-name").textContent="Selecionar CSV com o período completo";$("history-google-daily-file-name").textContent="Cliques e custo por dia";$("history-google-conversions-file-name").textContent="Dia, ação de conversão e conversões";$("history-preview").className="history-preview";$("history-preview").textContent="Selecione os CSVs para conferir as semanas identificadas antes de importar.";$("import-submit").textContent="Importar semanas";
+}
+async function refreshHistoricalPreview(){
+ const preview=$("history-preview"),metaFile=$("history-meta-csv").files[0],googleDaily=$("history-google-daily-csv").files[0],googleConversions=$("history-google-conversions-csv").files[0];historyImportPreview=null;preview.className="history-preview";
+ try{if(Boolean(googleDaily)!==Boolean(googleConversions)){preview.textContent="Para o Google, selecione os dois CSVs: diário e conversões.";return}if(!metaFile&&!googleDaily){preview.textContent="Selecione os CSVs para conferir as semanas identificadas antes de importar.";return}const meta=metaFile?historicalMetaPreview(csv(await metaFile.text())):[],google=googleDaily?historicalGooglePreview(csvWithHeaders(await googleDaily.text(),["dia","cliques","custo"]),csvWithHeaders(await googleConversions.text(),["dia","acao de conversao","conversoes"])):[],items=[...meta,...google],metrics=items.reduce((total,item)=>total+Object.keys(item.meta||item.google||{}).length,0),keys=[...new Set(items.map(item=>item.key))].sort(),first=keys.at(0),last=keys.at(-1);historyImportPreview={meta,google};preview.textContent=items.length?`Prévia pronta: ${keys.length} semanas e ${metrics} métricas ausentes identificadas, de ${first.split("-").reverse().join("/")} a ${last.split("-").reverse().join("/")}.`:"Nenhuma métrica ausente foi encontrada para este cliente."}catch(error){preview.textContent=`Não foi possível ler os CSVs: ${error.message}`;preview.className="history-preview error"}
+}
 
 // ✅ FUNÇÃO CORRIGIDA: importSubmit com tratamento apropriado de persistência
 async function importSubmit(e){
  e.preventDefault();
+ if($("import-dialog").dataset.mode==="history"){try{await importHistoricalCsv()}catch(error){$("history-preview").textContent=`Não foi possível importar: ${error.message}`;$("history-preview").className="history-preview error";console.error(error)}return}
  const c=clients[client];
  const mf=$("meta-csv").files[0];
  const gf=$("google-csv").files[0];
@@ -450,18 +542,20 @@ $("week-select").onchange=e=>{selected=e.target.value;localStorage.setItem(selec
 $("period-week").onclick=()=>{periodMode="week";$("period-week").setAttribute("aria-pressed","true");$("period-month").setAttribute("aria-pressed","false");render()};
 $("period-month").onclick=()=>{periodMode="month";$("period-week").setAttribute("aria-pressed","false");$("period-month").setAttribute("aria-pressed","true");render()};
 $("quick-notes").oninput=e=>{localStorage.setItem(key(`notes-${selected}`),e.target.value);const cur=active();if(cur)cur.note=e.target.value;window.performanceDb?.saveNote(client,selected,e.target.value)};
-$("quick-action-form").onsubmit=e=>{e.preventDefault();const input=$("quick-action");if(!input.value.trim())return;actions.push({title:input.value.trim(),meta:"Prazo a definir",done:false});input.value="";saveActions();renderActions(active())};
+$("quick-action-form").onsubmit=async e=>{e.preventDefault();const input=$("quick-action"),button=e.currentTarget.querySelector("button"),title=input.value.trim();if(!title||button.disabled)return;const targetClient=client,targetDate=selected,previousActions=actions.map(action=>({...action})),snapshot=[...previousActions,{title,meta:"Prazo a definir",done:false}];actions=snapshot;const cur=active();if(cur)cur.actions=snapshot.map(action=>({...action}));input.value="";button.disabled=true;renderActions(cur);try{const persisted=await saveActions(targetClient,targetDate,snapshot);if(client===targetClient&&selected===targetDate){actions=persisted.map(action=>({...action}));renderActions(active())}}catch{if(client===targetClient&&selected===targetDate){actions=previousActions;const current=active();if(current)current.actions=previousActions.map(action=>({...action}));input.value=title;renderActions(current);input.focus()}}finally{button.disabled=false}};
 $("history-open").onclick=()=>{history();$("history-dialog").showModal()};$("history-close").onclick=()=>$("history-dialog").close();
 $("strategy-close").onclick=()=>$("strategy-dialog").close();$("strategy-form").onsubmit=saveStrategyEntry;
 $("budget-open").onclick=$("budget-open-mobile").onclick=openBudgetEditor;["budget-close","budget-cancel"].forEach(id=>$(id).onclick=()=>$("budget-dialog").close());$("budget-form").onsubmit=saveBudgets;
 document.querySelectorAll(".metric-edit").forEach(button=>button.onclick=()=>openMetricEditor(button.dataset.platform));
 $("metrics-close").onclick=$("metrics-cancel").onclick=()=>$("metrics-dialog").close();$("metrics-form").onsubmit=saveMetricStrategy;
 $("metrics-default").onclick=()=>{renderMetricEditor(defaultMetrics(editingPlatform).map(m=>m.key));$("metrics-feedback").textContent="Padrão carregado. Clique em Salvar estratégia para aplicar."};
-$("import-open").onclick=()=>{setupImport();$("import-dialog").showModal()};["import-close","import-cancel"].forEach(id=>$(id).onclick=()=>$("import-dialog").close());$("import-form").onsubmit=importSubmit;
+["metric-value-close","metric-value-cancel"].forEach(id=>$(id).onclick=()=>$("metric-value-dialog").close());$("metric-value-form").onsubmit=saveMetricValue;$("metric-value-clear").onclick=clearMetricValue;
+$("import-open").onclick=()=>{setupImport();$("import-dialog").showModal()};$("history-import-open").onclick=()=>{setupHistoryImport();$("import-dialog").showModal()};["import-close","import-cancel"].forEach(id=>$(id).onclick=()=>$("import-dialog").close());$("import-form").onsubmit=importSubmit;
 $("meta-csv").onchange=async e=>{const file=e.target.files[0];$("meta-file-name").textContent=file?.name||"Selecionar relatório semanal";if(!file)return;try{const data=metaAggregate(csv(await file.text())),parts=[];if(Number.isFinite(data.leads))parts.push(`${num(data.leads)} leads`);if(Number.isFinite(data.messages))parts.push(`${num(data.messages)} mensagens`);$("import-feedback").textContent=parts.length?`Meta identificado: ${parts.join(" e ")}.`:"Meta carregado. Nenhum resultado de formulário ou mensagem foi identificado."}catch(error){$("import-feedback").textContent=`Não foi possível ler o Meta: ${error.message}`}};
+$("history-meta-csv").onchange=e=>{$("history-meta-file-name").textContent=e.target.files[0]?.name||"Selecionar CSV com o período completo";refreshHistoricalPreview()};$("history-google-daily-csv").onchange=e=>{$("history-google-daily-file-name").textContent=e.target.files[0]?.name||"Cliques e custo por dia";refreshHistoricalPreview()};$("history-google-conversions-csv").onchange=e=>{$("history-google-conversions-file-name").textContent=e.target.files[0]?.name||"Dia, ação de conversão e conversões";refreshHistoricalPreview()};
 $("google-csv").onchange=async e=>{const file=e.target.files[0];$("google-file-name").textContent=file?.name||"Selecionar relatório semanal";if(!file)return;try{const data=googleAggregate(csv(await file.text()));$("import-feedback").textContent=`Google identificado: ${num(data.leads)} leads e ${brl(data.spend)} de investimento.${Number.isFinite(data.cpl)?` CPL ${brl(data.cpl)}.`:" O custo das campanhas de leads está misturado a outras conversões; o CPL ficará indisponível."}`}catch(error){$("import-feedback").textContent=`Não foi possível ler o Google: ${error.message}`}};
 $("edit-ad-link").onclick=()=>{$("ad-link-form").hidden=false;$("ad-link-input").value=adLink();$("ad-link-input").focus()};
-$("ad-link-form").onsubmit=e=>{e.preventDefault();const value=$("ad-link-input").value.trim();try{if(value)new URL(value);localStorage.setItem(creativeKey("ad"),value);const cur=active();if(cur){cur.creative=cur.creative||{};cur.creative.instagram_url=value||null}window.performanceDb?.saveCreativeLink(client,selected,value);$("ad-link-form").hidden=true;renderCreative()}catch{$("ad-link-feedback").textContent="Cole um endereço completo e válido."}};
+$("ad-link-form").onsubmit=async e=>{e.preventDefault();const value=$("ad-link-input").value.trim(),feedback=$("ad-link-feedback"),submit=e.currentTarget.querySelector("button[type='submit']");try{if(value)new URL(value)}catch{feedback.textContent="Cole um endereço completo e válido.";return}if(!selected){feedback.textContent="Selecione uma semana antes de salvar a peça.";return}localStorage.setItem(creativeKey("ad"),value);queueCreativeLink(selected,value);const cur=active();if(cur){cur.creative=cur.creative||{};cur.creative.instagram_url=value||null}renderCreative();if(!window.performanceDb?.ready){feedback.textContent="Link salvo neste navegador. Ele será enviado quando o banco reconectar.";return}submit.disabled=true;feedback.textContent="Salvando link…";try{await window.performanceDb.saveCreativeLink(client,selected,value);removePendingCreativeLink(selected);feedback.textContent="Link salvo no banco.";$("ad-link-form").hidden=true}catch(error){console.error("Não foi possível salvar o link da peça:",error);feedback.textContent=`O link ficou pendente: ${error.message||"erro ao salvar no banco"}. Tentaremos novamente ao reconectar.`}finally{submit.disabled=false}};
 $("creative-upload").onchange=e=>{const file=e.target.files[0];if(!file)return;if(file.size>4500000){$("creative-status").textContent="A imagem deve ter menos de 4,5 MB.";return}window.performanceDb?.uploadCreative(client,selected,file).catch(()=>{$("creative-status").textContent="Não foi possível salvar a imagem no banco."});const reader=new FileReader();reader.onload=()=>{try{localStorage.setItem(creativeKey("creative"),reader.result);const cur=active();if(cur){cur.creative=cur.creative||{};cur.creative.signedUrl=reader.result}renderCreative()}catch{$("creative-status").textContent="A imagem é grande demais para este navegador."}};reader.readAsDataURL(file)};
 $("clear-creative-image").onclick=()=>{localStorage.removeItem(creativeKey("creative"));const cur=active();if(cur?.creative)cur.creative.signedUrl=null;window.performanceDb?.clearCreativeImage(client,selected);renderCreative()};
 $("remove-imported-week").onclick=async()=>{if(!confirm("Remover esta semana e todos os dados associados?"))return;if(window.performanceDb?.ready){await window.performanceDb.deleteWeek(client,selected);clients[client].weeks=clients[client].weeks.filter(x=>x.key!==selected)}removeImported(selected,client);selected="";localStorage.removeItem(selectedStorageKey(client));loadWeeks();render();$("import-dialog").close()};

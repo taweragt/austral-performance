@@ -67,3 +67,12 @@ Execute `node serve_preview.mjs` e abra `http://127.0.0.1:8767/`.
 - o seletor de semanas mostra uma única data, sem intervalo duplicado;
 - datas futuras ficam bloqueadas pelo formulário;
 - `tests/report-date.test.mjs` cobre preenchimento, validade e bloqueio de datas futuras.
+
+## Edição dos valores semanais
+
+- o lápis do cabeçalho continua responsável apenas por adicionar, remover e ordenar indicadores;
+- cada métrica possui um lápis próprio na visão semanal para corrigir seu valor;
+- a edição aceita inteiros e decimais, com vírgula ou ponto, e permite limpar um valor incorreto;
+- a correção é aplicada somente ao cliente, plataforma e semana selecionados;
+- alterações são salvas no Supabase e mantidas em uma fila local caso o banco esteja temporariamente indisponível;
+- a visão mensal permanece consolidada e sem edição direta para evitar mudanças ambíguas em valores agregados.
