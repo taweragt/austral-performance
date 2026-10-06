@@ -1,5 +1,16 @@
 # Status do projeto
 
+## Atualização — tarefas da semana sumindo e duplicando — 2026-10-05 (no ar)
+
+- **bug**: tarefas da semana eram salvas na tabela `actions`, mas sumiam ao recarregar. Causa: `loadWeeks()`/`syncPendingImports()` mesclavam o cache local de CSV importado (`performance-v2-imported-*`) por cima da semana do banco, e a cópia do cache não tinha tarefas;
+- **correção (app.js)**: com `performanceDb.ready`, a semana do banco prevalece e o cache só entra para datas ausentes no banco; importações pendentes atualizam métricas sem apagar ações, nota e peça (`mergeWeek` preserva esses campos);
+- **correção (supabase-app.js, `saveActions`)**: update por UUID do banco, insert só de ações novas com `.select().single()`, id devolvido ao objeto da ação, `position` pelo índice, exclusão das ações removidas da lista (só ids conhecidos por este navegador) e fila por semana para cliques rápidos não duplicarem. Não usa a RPC `replace_week_actions`;
+- testes: 2 casos novos em `tests/persistence.test.mjs` (falham na versão antiga, passam na nova); teste manual no preview logado: criar, concluir com cliques rápidos, recarregar, cache simulado, trocar de cliente e voltar — 1 linha no banco, concluída. Tarefa de teste apagada;
+- publicado: commit `f3ba26f` no `main` (GitHub), deploy `performance-de7l2y6q1` com alias `performance-austral-app.vercel.app` (scripts `v=20261005-2`). **Atenção**: deploy disparado pelo push do GitHub não recebe o alias de produção; é preciso `vercel deploy --prod` + `vercel alias set <deploy> performance-austral-app.vercel.app`;
+- Supabase Auth: Site URL alterado para `https://performance-austral-app.vercel.app` (antes apontava para `austral-performance.vercel.app`, versão antiga de 17/09 fora desta conta Vercel);
+- preview local: `serve_preview.mjs` (porta 8767), configurado como `austral-preview` em `CLAUDE/.claude/launch.json`;
+- pendente: `supabase/historical-doc-data.json` (métricas de clientes) não foi commitado porque o repositório é público — decidir antes de subir.
+
 ## Atualização — estratégia de campanha por cliente — 2026-09-19 (pendente de deploy)
 
 - adicionado botão "+" (ícone de estratégia) em cada card de cliente na Visão Geral da Austral, sem interferir no clique que abre o cliente (`event.stopPropagation()`);
