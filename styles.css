@@ -294,3 +294,12 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
   .strategy-dialog { width: calc(100% - 20px); }.strategy-head, .strategy-body { padding-left: 16px; padding-right: 16px; }.strategy-head h2 { font-size: 24px; }.strategy-line { grid-template-columns: 1fr; gap: 2px; }
   .auth-card { padding: 26px 20px; }.auth-card h1 { font-size: 34px; }.auth-actions { grid-template-columns: 1fr; }.database-status { right: 10px; bottom: 10px; }
 }
+
+/* Novo cliente */
+.brand-initials,.portfolio-brand .brand-initials{display:grid;place-items:center;width:100%;height:100%;color:#fff;font-family:var(--mono);font-size:15px;font-weight:800;letter-spacing:-.04em}
+.new-client-trigger{margin-left:auto;margin-right:14px;padding:0 14px}
+.portfolio-head{align-items:center}
+.new-client-checks{display:grid;gap:8px}.new-client-checks label{display:flex;align-items:center;gap:8px;font-weight:600}
+.new-client-dialog .field-group input[type="text"],.new-client-dialog select{width:100%;height:40px;padding:0 12px;border:1px solid var(--line,#d6dbe5);border-radius:9px;background:transparent;color:inherit;font:inherit}
+.new-client-dialog input[type="color"]{width:64px;height:40px;padding:2px;border:1px solid var(--line,#d6dbe5);border-radius:9px;background:transparent}
+@media (max-width:760px){.new-client-trigger{width:100%;margin:8px 0}}

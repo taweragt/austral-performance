@@ -344,6 +344,7 @@
       current.followers = row.tracks_followers;
       current.youtube = row.tracks_youtube;
       current.showCreative = row.show_creative !== false;
+      current.brandColor = row.brand_color || null;
       current.metaMetrics = row.default_meta_metrics.map((key) => metricDefinition("meta", key));
       current.googleMetrics = row.default_google_metrics.map((key) => metricDefinition("google", key));
       current.weeks = mappedWeeks.filter((week) => week.clientId === row.id);
@@ -491,6 +492,14 @@
       }
       statusBadge.textContent = "Banco conectado";
       statusBadge.dataset.state = "ok";
+    },
+    async createClient(values) {
+      statusBadge.textContent = "Criando cliente…";
+      statusBadge.dataset.state = "busy";
+      const last = await database.from("clients").select("sort_order").order("sort_order", { ascending: false }).limit(1);
+      const result = await database.from("clients").insert({ ...values, sort_order: (last.data?.[0]?.sort_order ?? -1) + 1 });
+      if (result.error) { statusBadge.textContent = "Erro ao salvar"; statusBadge.dataset.state = "error"; throw result.error; }
+      await loadDatabase();
     },
     async saveClientDisplay(clientId, showCreative) {
       statusBadge.textContent = "Salvando preferência…";

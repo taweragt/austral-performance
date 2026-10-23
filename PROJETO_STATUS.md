@@ -1,5 +1,17 @@
 # Status do projeto
 
+## Atualização — cadastro de novo cliente — 2026-10-23 (preview, aguardando aprovação)
+
+- botão "+ Novo cliente" na Visão Geral (só aparece para o proprietário) abre formulário: nome, iniciais (sugeridas), cor da marca, modelo de métricas do Meta (Leads / Tráfego / Conversas), orçamentos, Google Ads, seguidores e YouTube;
+- `window.performanceDb.createClient()` (supabase-app.js) insere em `clients` com `sort_order` seguinte e recarrega o banco; id = slug do nome (ex.: `descubra-turismo`), duplicado é recusado;
+- cliente sem logo usa avatar com as iniciais na cor da marca (`themeFor()` / `brandMark()` em app.js); os 10 clientes antigos continuam com tema fixo;
+- bug corrigido: `render()` saía antes de `brand()` quando o cliente não tinha semana — agora mostra estado vazio ("Sem semanas cadastradas") com a marca certa;
+- migração `supabase/008_new_clients.sql` **aplicada no Supabase** em 2026-10-23: coluna `clients.brand_color` e política restritiva `owner_only_insert_clients` (só proprietário insere cliente);
+- testes: persistence, report-date e historical-doc-data passam; `importers.test.mjs` falha por depender de CSVs em `Desktop - AUSTRAL\...` que não existem mais (não relacionado);
+- validado em preview local com simulação do proprietário (login real não foi usado): card, seletor, orçamento total e página do cliente novo; **falta testar a criação real no banco com login**;
+- logo do cliente novo: ainda não há upload; por enquanto só iniciais + cor;
+- backups `*.bak_20261023`; cache dos scripts `20261023-1`.
+
 ## Atualização — tarefas da semana sumindo e duplicando — 2026-10-05 (no ar)
 
 - **bug**: tarefas da semana eram salvas na tabela `actions`, mas sumiam ao recarregar. Causa: `loadWeeks()`/`syncPendingImports()` mesclavam o cache local de CSV importado (`performance-v2-imported-*`) por cima da semana do banco, e a cópia do cache não tinha tarefas;

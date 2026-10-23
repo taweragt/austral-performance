@@ -37,6 +37,18 @@ const clientThemes={
  "oralwave":{logo:"./assets/logos/oralwave.jpg",logoScale:1.24,primary:"#087f79",soft:"#e7fbf9",accent:"#04b8ad",logoBg:"#04b8ad"}
 };
 
+const mixWhite=(hex,amount)=>{const n=parseInt(hex.slice(1),16),mix=shift=>Math.round(((n>>shift)&255)*(1-amount)+255*amount);return"#"+[16,8,0].map(s=>mix(s).toString(16).padStart(2,"0")).join("")};
+function themeFor(id,c){
+ if(clientThemes[id])return clientThemes[id];
+ if(c?.brandColor)return{logo:null,primary:c.brandColor,soft:mixWhite(c.brandColor,.9),accent:c.brandColor,logoBg:c.brandColor,initials:c.initials};
+ return clientThemes["4medic"];
+}
+const brandMark=(theme,c,alt)=>theme.logo?`<img src="${theme.logo}" alt="${alt}">`:`<span class="brand-initials" aria-hidden="true">${esc(c.initials||c.name.slice(0,2).toUpperCase())}</span>`;
+const newClientPresets={
+ leads:{meta:["leads","cpl","visits","costVisit","followers","newFollowers"],google:["leads","cpl"]},
+ traffic:{meta:["visits","costVisit","followers","newFollowers"],google:["leads","cpl"]},
+ conversations:{meta:["messages","costPerMessage","results","costPerResult","followers","newFollowers"],google:["leads","cpl"]}
+};
 const viewStorageKey="performance-v2-view",selectedStorageKey=clientId=>`performance-v2-selected-${clientId}`;
 let client=localStorage.getItem("performance-v2-client")||"4medic",selected="",weeks=[],actions=[],appView=localStorage.getItem(viewStorageKey)==="client"?"client":"overview";
 if(!clients[client])client="4medic";
@@ -179,7 +191,7 @@ function renderOverview(){
  const budget=entries.reduce((sum,{c})=>sum+(Number(c.metaBudget)||0)+(Number(c.googleBudget)||0),0),spendValues=entries.map(x=>x.spend).filter(Number.isFinite),resultValues=entries.map(x=>x.results).filter(Number.isFinite),totalSpend=spendValues.reduce((a,b)=>a+b,0),totalResults=resultValues.reduce((a,b)=>a+b,0);
  $("overview-budget").textContent=brl(budget);$("overview-spend").textContent=spendValues.length?brl(totalSpend):"—";$("overview-results").textContent=resultValues.length?num(totalResults):"—";$("overview-cpr").textContent=totalSpend&&totalResults?brl(totalSpend/totalResults):"—";
  const newest=entries.map(x=>x.cur?.key).filter(Boolean).sort().at(-1);$("overview-period").textContent=newest?`Últimas semanas importadas · atualização mais recente em ${newest.split("-").reverse().join("/")}`:"Importe uma semana para iniciar o consolidado.";
- $("portfolio-grid").innerHTML=entries.map(({id,c,cur,state,results,spend})=>{const theme=clientThemes[id]||clientThemes["4medic"];return`<div class="portfolio-card-shell"><button class="portfolio-card" type="button" data-client="${id}" style="--card-accent:${theme.darkPrimary||theme.primary}"><span class="portfolio-brand" style="background:${theme.logoBg}"><img src="${theme.logo}" alt=""></span><span class="portfolio-name"><strong>${esc(c.name)}</strong><small>${cur?`Semana ${cur.date}`:"Sem semana cadastrada"}</small></span><span class="portfolio-metric"><small>Investimento</small><strong>${brl(spend)}</strong></span><span class="portfolio-metric"><small>Resultados</small><strong>${num(results)}</strong></span><span class="portfolio-state ${state.cls}">${state.text}</span><span class="portfolio-arrow" aria-hidden="true">→</span></button><button class="strategy-trigger" type="button" data-strategy-client="${id}" aria-label="Estratégia de ${esc(c.name)}" title="Estratégia de campanha"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>`}).join("");
+ $("portfolio-grid").innerHTML=entries.map(({id,c,cur,state,results,spend})=>{const theme=themeFor(id,c);return`<div class="portfolio-card-shell"><button class="portfolio-card" type="button" data-client="${id}" style="--card-accent:${theme.darkPrimary||theme.primary}"><span class="portfolio-brand" style="background:${theme.logoBg}">${brandMark(theme,c,"")}</span><span class="portfolio-name"><strong>${esc(c.name)}</strong><small>${cur?`Semana ${cur.date}`:"Sem semana cadastrada"}</small></span><span class="portfolio-metric"><small>Investimento</small><strong>${brl(spend)}</strong></span><span class="portfolio-metric"><small>Resultados</small><strong>${num(results)}</strong></span><span class="portfolio-state ${state.cls}">${state.text}</span><span class="portfolio-arrow" aria-hidden="true">→</span></button><button class="strategy-trigger" type="button" data-strategy-client="${id}" aria-label="Estratégia de ${esc(c.name)}" title="Estratégia de campanha"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>`}).join("");
  $("portfolio-grid").querySelectorAll("[data-client]").forEach(button=>button.onclick=()=>openClient(button.dataset.client));
  $("portfolio-grid").querySelectorAll("[data-strategy-client]").forEach(button=>button.onclick=event=>{event.stopPropagation();openStrategyDialog(button.dataset.strategyClient)});
 }
@@ -275,7 +287,27 @@ async function saveStrategyEntry(event){
  finally{submit.disabled=false}
 }
 function updateAccessButton(){
+ const newBtn=$("client-new-open");if(newBtn)newBtn.hidden=!window.accessControl?.isOwner||appView!=="overview";
  const btn=$("access-open");if(!btn)return;btn.hidden=!window.accessControl?.isOwner||appView!=="overview";
+}
+const suggestInitials=name=>{const words=name.trim().split(/\s+/).filter(Boolean);return(words.length>1?words[0][0]+words[1][0]:name.trim().slice(0,2)).toUpperCase()};
+const slugify=name=>name.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+function openNewClient(){
+ $("client-new-form").reset();$("client-new-google-field").hidden=true;$("client-new-feedback").textContent="A logo pode ser adicionada depois; por enquanto o painel usa as iniciais na cor da marca.";$("client-new-feedback").className="budget-feedback";$("client-new-dialog").showModal();$("client-new-name").focus();
+}
+async function saveNewClient(event){
+ event.preventDefault();
+ const name=$("client-new-name").value.trim(),initials=$("client-new-initials").value.trim().toUpperCase(),feedback=$("client-new-feedback"),submit=event.currentTarget.querySelector('[type="submit"]');
+ let id=slugify(name);
+ if(!name||!id||initials.length<1){feedback.textContent="Informe o nome e as iniciais do cliente.";feedback.className="budget-feedback error";return}
+ if(clients[id]){feedback.textContent="Já existe um cliente com esse nome.";feedback.className="budget-feedback error";return}
+ const hasGoogle=$("client-new-has-google").checked,preset=newClientPresets[$("client-new-model").value]||newClientPresets.leads;
+ submit.disabled=true;feedback.textContent="Criando cliente…";feedback.className="budget-feedback";
+ try{
+  await window.performanceDb.createClient({id,name,initials,brand_color:$("client-new-color").value,meta_budget:Number($("client-new-meta").value)||0,google_budget:hasGoogle?Number($("client-new-google").value)||0:null,has_google:hasGoogle,tracks_followers:$("client-new-followers").checked,tracks_youtube:$("client-new-youtube").checked,default_meta_metrics:preset.meta,default_google_metrics:hasGoogle?preset.google:[]});
+  $("client-new-dialog").close();populate();renderOverview();
+ }catch(error){console.error(error);feedback.textContent=error?.code==="42501"?"Somente o proprietário pode criar clientes.":"Não foi possível criar o cliente. Tente novamente.";feedback.className="budget-feedback error"}
+ finally{submit.disabled=false}
 }
 window.updateAccessButton=updateAccessButton;
 function showOverview(){
@@ -287,10 +319,10 @@ function openClient(clientId=client){
 }
 function weekOptions(){$("week-select").replaceChildren(...weeks.slice().reverse().map(w=>Object.assign(document.createElement("option"),{value:w.key,textContent:w.date})));$("week-select").value=selected}
 function brand(){
- const c=clients[client],theme=clientThemes[client]||clientThemes["4medic"],root=document.documentElement;document.querySelector(".brand-copy strong").textContent=c.name;document.querySelector(".brand").ariaLabel=`${c.name} — início`;
+ const c=clients[client],theme=themeFor(client,clients[client]),root=document.documentElement;document.querySelector(".brand-copy strong").textContent=c.name;document.querySelector(".brand").ariaLabel=`${c.name} — início`;
  document.title=`${c.name} | Resumo rápido da conta`;
  root.style.setProperty("--blue",root.dataset.theme==="dark"?(theme.darkPrimary||theme.primary):theme.primary);root.style.setProperty("--brand-soft",theme.soft);root.style.setProperty("--brand-accent",theme.accent);root.style.setProperty("--brand-logo-bg",theme.logoBg);
- const mark=document.querySelector(".brand-mark");mark.innerHTML=`<img src="${theme.logo}" alt="Logo ${esc(c.name)}">`;
+ const mark=document.querySelector(".brand-mark");mark.innerHTML=brandMark(theme,c,`Logo ${esc(c.name)}`);
  document.querySelector(".brand-copy small").textContent="Reunião de performance";
  $("meta-budget").textContent=compact(c.metaBudget);$("google-budget-label").hidden=!c.google;if(c.google)$("google-budget").textContent=compact(c.googleBudget);
  $("google-card").hidden=!c.google;document.querySelector(".platforms").classList.toggle("single",!c.google);
@@ -325,7 +357,13 @@ function renderActions(cur){
 async function saveActions(targetClient=client,targetDate=selected,nextActions=actions){const snapshot=nextActions.map(action=>({...action}));localStorage.setItem(`performance-v2-actions-${targetDate}-${targetClient}`,JSON.stringify(snapshot));const targetWeek=clients[targetClient]?.weeks.find(week=>week.key===targetDate);if(targetWeek)targetWeek.actions=snapshot.map(action=>({...action}));if(client===targetClient&&selected===targetDate)pending();if(!window.performanceDb?.ready)return snapshot;const persisted=await window.performanceDb.saveActions(targetClient,targetDate,snapshot);if(targetWeek)targetWeek.actions=persisted.map(action=>({...action}));return persisted}
 function pending(){const n=actions.filter(x=>!x.done).length;$("pending-count").textContent=`${n} ${n===1?"pendente":"pendentes"}`}
 function render(){
- const c=clients[client],rawCur=active(),rawPrev=previous(),metaDefs=effectiveMetrics("meta"),googleDefs=c.google?effectiveMetrics("google"):[];if(!rawCur)return;
+ const c=clients[client],rawCur=active(),rawPrev=previous(),metaDefs=effectiveMetrics("meta"),googleDefs=c.google?effectiveMetrics("google"):[];
+ if(!rawCur){
+  brand();$("week-select").replaceChildren();$("meta-metrics").replaceChildren();$("google-metrics").replaceChildren();$("status-title").textContent="Sem semanas cadastradas";$("status-copy").textContent="Use “Importar semana” para registrar os primeiros dados desta conta.";$("status-pill").textContent="Novo";$("quick-notes").value="";
+  setHealth("meta-health",{text:"Sem dados",cls:"neutral"});setHealth("google-health",{text:"Sem dados",cls:"neutral"});$("meta-insight")&&($("meta-insight").textContent="");$("google-insight").textContent="";
+  renderActions({actions:[]});
+  return;
+ }
  const{cur,prev}=periodViewFor(rawCur,rawPrev);
  brand();weekOptions();metrics($("meta-metrics"),metaDefs,cur.meta,prev?.meta,"meta");
  if(c.google)metrics($("google-metrics"),googleDefs,cur.google||{},prev?.google||{},"google");status(cur,prev);renderActions(rawCur);
@@ -544,6 +582,8 @@ $("period-month").onclick=()=>{periodMode="month";$("period-week").setAttribute(
 $("quick-notes").oninput=e=>{localStorage.setItem(key(`notes-${selected}`),e.target.value);const cur=active();if(cur)cur.note=e.target.value;window.performanceDb?.saveNote(client,selected,e.target.value)};
 $("quick-action-form").onsubmit=async e=>{e.preventDefault();const input=$("quick-action"),button=e.currentTarget.querySelector("button"),title=input.value.trim();if(!title||button.disabled)return;const targetClient=client,targetDate=selected,previousActions=actions.map(action=>({...action})),snapshot=[...previousActions,{title,meta:"Prazo a definir",done:false}];actions=snapshot;const cur=active();if(cur)cur.actions=snapshot.map(action=>({...action}));input.value="";button.disabled=true;renderActions(cur);try{const persisted=await saveActions(targetClient,targetDate,snapshot);if(client===targetClient&&selected===targetDate){actions=persisted.map(action=>({...action}));renderActions(active())}}catch{if(client===targetClient&&selected===targetDate){actions=previousActions;const current=active();if(current)current.actions=previousActions.map(action=>({...action}));input.value=title;renderActions(current);input.focus()}}finally{button.disabled=false}};
 $("history-open").onclick=()=>{history();$("history-dialog").showModal()};$("history-close").onclick=()=>$("history-dialog").close();
+$("client-new-open").onclick=openNewClient;["client-new-close","client-new-cancel"].forEach(id=>$(id).onclick=()=>$("client-new-dialog").close());$("client-new-form").onsubmit=saveNewClient;$("client-new-has-google").onchange=e=>{$("client-new-google-field").hidden=!e.target.checked};
+$("client-new-name").oninput=e=>{const init=$("client-new-initials");if(!init.dataset.touched)init.value=suggestInitials(e.target.value)};$("client-new-initials").oninput=e=>{e.target.dataset.touched="1"};$("client-new-form").onreset=()=>{delete $("client-new-initials").dataset.touched};
 $("strategy-close").onclick=()=>$("strategy-dialog").close();$("strategy-form").onsubmit=saveStrategyEntry;
 $("budget-open").onclick=$("budget-open-mobile").onclick=openBudgetEditor;["budget-close","budget-cancel"].forEach(id=>$(id).onclick=()=>$("budget-dialog").close());$("budget-form").onsubmit=saveBudgets;
 document.querySelectorAll(".metric-edit").forEach(button=>button.onclick=()=>openMetricEditor(button.dataset.platform));

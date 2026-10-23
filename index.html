@@ -75,6 +75,7 @@
     </section>
     <section class="portfolio-head">
       <div><p class="overline">Carteira ativa</p><h2>Desempenho por cliente</h2></div>
+      <button class="import-trigger new-client-trigger" id="client-new-open" type="button" hidden>+ Novo cliente</button>
       <div class="portfolio-legend"><span><i class="good"></i>Evolução</span><span><i class="neutral"></i>Estável</span><span><i class="bad"></i>Atenção</span></div>
     </section>
     <section class="portfolio-grid" id="portfolio-grid" aria-live="polite"></section>
@@ -197,6 +198,55 @@
       <div class="budget-footer">
         <button class="secondary-button" id="budget-cancel" type="button">Cancelar</button>
         <button class="primary-button" type="submit">Salvar orçamento</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="budget-dialog new-client-dialog" id="client-new-dialog" aria-labelledby="client-new-title">
+    <form id="client-new-form">
+      <div class="budget-head">
+        <div><p class="overline">Carteira</p><h2 id="client-new-title">Novo cliente</h2><p>Cadastre a conta para começar a registrar as semanas.</p></div>
+        <button id="client-new-close" type="button" aria-label="Fechar cadastro de cliente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="budget-body">
+        <div class="field-group">
+          <label for="client-new-name">Nome do cliente</label>
+          <input id="client-new-name" type="text" maxlength="60" autocomplete="off" required placeholder="Descubra Turismo">
+        </div>
+        <div class="field-group">
+          <label for="client-new-initials">Iniciais (2 letras)</label>
+          <input id="client-new-initials" type="text" maxlength="2" autocomplete="off" required placeholder="DT">
+        </div>
+        <div class="field-group">
+          <label for="client-new-color">Cor da marca</label>
+          <input id="client-new-color" type="color" value="#2457f5">
+        </div>
+        <div class="field-group">
+          <label for="client-new-model">Modelo de métricas do Meta</label>
+          <select id="client-new-model">
+            <option value="leads">Leads (formulário / LP)</option>
+            <option value="traffic">Tráfego (visitas)</option>
+            <option value="conversations">Conversas (mensagens)</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label for="client-new-meta">Orçamento mensal Meta</label>
+          <div class="currency-field"><span>R$</span><input id="client-new-meta" type="number" min="0" step="0.01" inputmode="decimal" value="0" required></div>
+        </div>
+        <div class="field-group" id="client-new-google-field" hidden>
+          <label for="client-new-google">Orçamento mensal Google Ads</label>
+          <div class="currency-field"><span>R$</span><input id="client-new-google" type="number" min="0" step="0.01" inputmode="decimal" value="0"></div>
+        </div>
+        <div class="field-group new-client-checks">
+          <label><input id="client-new-has-google" type="checkbox"> Tem Google Ads</label>
+          <label><input id="client-new-followers" type="checkbox" checked> Acompanha seguidores</label>
+          <label><input id="client-new-youtube" type="checkbox"> Acompanha YouTube</label>
+        </div>
+        <p class="budget-feedback" id="client-new-feedback" aria-live="polite">A logo pode ser adicionada depois; por enquanto o painel usa as iniciais na cor da marca.</p>
+      </div>
+      <div class="budget-footer">
+        <button class="secondary-button" id="client-new-cancel" type="button">Cancelar</button>
+        <button class="primary-button" type="submit">Criar cliente</button>
       </div>
     </form>
   </dialog>
@@ -377,7 +427,7 @@
   <footer class="page-footer"><span id="footer-updated">Painel protegido</span><span id="footer-source">Dados carregados após autenticação</span></footer>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./supabase-config.js?v=20260916-1"></script>
-  <script src="./app.js?v=20261005-2"></script>
-  <script src="./supabase-app.js?v=20261005-2"></script>
+  <script src="./app.js?v=20261023-1"></script>
+  <script src="./supabase-app.js?v=20261023-1"></script>
 </body>
 </html>
