@@ -1,6 +1,6 @@
 # Status do projeto
 
-## Atualização — cadastro de novo cliente — 2026-10-23 (preview, aguardando aprovação)
+## Atualização — cadastro de novo cliente — 2026-10-23 (no ar)
 
 - botão "+ Novo cliente" na Visão Geral (só aparece para o proprietário) abre formulário: nome, iniciais (sugeridas), cor da marca, modelo de métricas do Meta (Leads / Tráfego / Conversas), orçamentos, Google Ads, seguidores e YouTube;
 - `window.performanceDb.createClient()` (supabase-app.js) insere em `clients` com `sort_order` seguinte e recarrega o banco; id = slug do nome (ex.: `descubra-turismo`), duplicado é recusado;
@@ -10,6 +10,7 @@
 - testes: persistence, report-date e historical-doc-data passam; `importers.test.mjs` falha por depender de CSVs em `Desktop - AUSTRAL\...` que não existem mais (não relacionado);
 - validado em preview local com simulação do proprietário (login real não foi usado): card, seletor, orçamento total e página do cliente novo; **falta testar a criação real no banco com login**;
 - logo do cliente novo: ainda não há upload; por enquanto só iniciais + cor;
+- publicado: deploy `performance-b7zhsn8b2` (`vercel deploy --prod` + alias `performance-austral-app.vercel.app`), testado logado pelo usuário antes da troca; **backup para rollback**: `performance-de7l2y6q1` (versão de 05/10, `vercel alias set performance-de7l2y6q1-austral-app.vercel.app performance-austral-app.vercel.app`);
 - backups `*.bak_20261023`; cache dos scripts `20261023-1`.
 
 ## Atualização — tarefas da semana sumindo e duplicando — 2026-10-05 (no ar)
