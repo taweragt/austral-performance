@@ -308,3 +308,18 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .logo-dialog .budget-body{grid-template-columns:1fr;justify-items:center}
 .logo-preview{display:grid;place-items:center;width:96px;height:96px;overflow:hidden;border-radius:50%;background:var(--brand-logo-bg,#fff);border:1px solid var(--line,#d6dbe5)}
 .logo-preview img{width:100%;height:100%;object-fit:cover}
+
+/* Editar cliente na Visão Geral */
+.logo-edit{position:absolute;left:12px;top:50%;z-index:3;display:grid;place-items:center;width:30px;height:30px;margin-top:-15px;padding:0;border:1px solid var(--line);border-radius:50%;color:var(--blue);background:var(--surface,#fff);cursor:pointer;opacity:0;transition:opacity .15s}
+.logo-edit svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.portfolio-grid:not(.is-owner) .logo-edit{display:none}
+.portfolio-card-shell:hover .logo-edit,.logo-edit:focus-visible{opacity:1}
+@media (hover:none){.logo-edit{opacity:1;width:22px;height:22px;margin-top:-11px;left:4px}}
+.client-danger{display:grid;gap:10px;padding:0 24px 16px}
+.client-delete-box{display:grid;gap:8px;padding:12px;border:1px solid #e3b4b4;border-radius:10px}
+.client-delete-box p{margin:0;font-size:13px}
+.client-delete-box input{height:38px;padding:0 10px;border:1px solid var(--line,#d6dbe5);border-radius:8px;background:transparent;color:inherit;font:inherit}
+.client-delete-box .danger-button:disabled{opacity:.45;cursor:not-allowed}
+.archived-section{margin:18px 4px 0}.archived-list{display:grid;gap:6px;margin-top:10px}
+.archived-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;opacity:.85}
+@media (max-width:760px){.client-danger{padding:0 16px 12px}}

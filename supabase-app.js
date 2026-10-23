@@ -341,6 +341,7 @@
     clientResult.data.forEach((row) => {
       const current = clients[row.id] || {};
       current.logoUrl = logoUrls.get(row.id) || null;
+      current.archived = Boolean(row.archived_at);
       current.name = row.name;
       current.initials = row.initials;
       current.metaBudget = Number(row.meta_budget || 0);
@@ -367,7 +368,7 @@
 
     window.performanceDb.ready = true;
     if (window.syncPendingImports) await window.syncPendingImports();
-    if (!clients[client]) client = Object.keys(clients)[0];
+    if (!clients[client] || clients[client].archived) client = Object.keys(clients).find((id) => !clients[id].archived) || client;
     populate();
     selected = localStorage.getItem(`performance-v2-selected-${client}`) || "";
     loadWeeks();
@@ -517,6 +518,26 @@
       const update = await database.from("clients").update({ logo_path: null }).eq("id", clientId);
       if (update.error) throw update.error;
       if (previous.data?.logo_path) await database.storage.from("performance-creatives").remove([previous.data.logo_path]);
+    },
+    async archiveClient(clientId, archived) {
+      const result = await database.from("clients").update({ archived_at: archived ? new Date().toISOString() : null }).eq("id", clientId);
+      if (result.error) throw result.error;
+    },
+    async deleteClient(clientId) {
+      const paths = [];
+      const info = await database.from("clients").select("logo_path").eq("id", clientId).single();
+      if (info.data?.logo_path) paths.push(info.data.logo_path);
+      const weekRows = await database.from("weeks").select("id").eq("client_id", clientId);
+      if (weekRows.error) throw weekRows.error;
+      const weekIdList = (weekRows.data || []).map((row) => row.id);
+      if (weekIdList.length) {
+        const creatives = await database.from("creatives").select("storage_path").in("week_id", weekIdList);
+        (creatives.data || []).forEach((row) => row.storage_path && paths.push(row.storage_path));
+      }
+      const removed = await database.from("clients").delete().eq("id", clientId).select("id");
+      if (removed.error) throw removed.error;
+      if (!removed.data?.length) throw Object.assign(new Error("Exclusão não permitida."), { code: "42501" });
+      if (paths.length) await database.storage.from("performance-creatives").remove(paths);
     },
     async createClient(values) {
       statusBadge.textContent = "Criando cliente…";

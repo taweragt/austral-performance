@@ -158,7 +158,7 @@ function setHealth(id,h){$(id).textContent=h.text;$(id).className=`platform-heal
 const compact=n=>n>=1000?`R$ ${(n/1000).toLocaleString("pt-BR",{maximumFractionDigits:1})} mil`:brl(n);
 function populate(){
  const austral=Object.assign(document.createElement("option"),{value:"__austral__",textContent:"Austral"});
- $("client-select").replaceChildren(austral,...Object.entries(clients).map(([id,c])=>Object.assign(document.createElement("option"),{value:id,textContent:c.name})));
+ $("client-select").replaceChildren(austral,...Object.entries(clients).filter(([,c])=>!c.archived).map(([id,c])=>Object.assign(document.createElement("option"),{value:id,textContent:c.name})));
  $("client-select").value=appView==="overview"?"__austral__":client;
 }
 function platformSpend(values={}){
@@ -187,12 +187,14 @@ function overviewStatus(cur,prev){
  return{text:"Estável",cls:"neutral"};
 }
 function renderOverview(){
- const entries=Object.entries(clients).map(([id,c])=>{const ordered=[...(c.weeks||[])].sort((a,b)=>a.key.localeCompare(b.key));const cur=ordered.at(-1),prev=ordered.at(-2);return{id,c,cur,prev,state:overviewStatus(cur,prev),results:accountResults(cur),spend:accountSpend(cur)}});
+ const entries=Object.entries(clients).filter(([,c])=>!c.archived).map(([id,c])=>{const ordered=[...(c.weeks||[])].sort((a,b)=>a.key.localeCompare(b.key));const cur=ordered.at(-1),prev=ordered.at(-2);return{id,c,cur,prev,state:overviewStatus(cur,prev),results:accountResults(cur),spend:accountSpend(cur)}});
  const budget=entries.reduce((sum,{c})=>sum+(Number(c.metaBudget)||0)+(Number(c.googleBudget)||0),0),spendValues=entries.map(x=>x.spend).filter(Number.isFinite),resultValues=entries.map(x=>x.results).filter(Number.isFinite),totalSpend=spendValues.reduce((a,b)=>a+b,0),totalResults=resultValues.reduce((a,b)=>a+b,0);
  $("overview-budget").textContent=brl(budget);$("overview-spend").textContent=spendValues.length?brl(totalSpend):"—";$("overview-results").textContent=resultValues.length?num(totalResults):"—";$("overview-cpr").textContent=totalSpend&&totalResults?brl(totalSpend/totalResults):"—";
  const newest=entries.map(x=>x.cur?.key).filter(Boolean).sort().at(-1);$("overview-period").textContent=newest?`Últimas semanas importadas · atualização mais recente em ${newest.split("-").reverse().join("/")}`:"Importe uma semana para iniciar o consolidado.";
- $("portfolio-grid").innerHTML=entries.map(({id,c,cur,state,results,spend})=>{const theme=themeFor(id,c);return`<div class="portfolio-card-shell"><button class="portfolio-card" type="button" data-client="${id}" style="--card-accent:${theme.darkPrimary||theme.primary}"><span class="portfolio-brand" style="background:${theme.logoBg}">${brandMark(theme,c,"")}</span><span class="portfolio-name"><strong>${esc(c.name)}</strong><small>${cur?`Semana ${cur.date}`:"Sem semana cadastrada"}</small></span><span class="portfolio-metric"><small>Investimento</small><strong>${brl(spend)}</strong></span><span class="portfolio-metric"><small>Resultados</small><strong>${num(results)}</strong></span><span class="portfolio-state ${state.cls}">${state.text}</span><span class="portfolio-arrow" aria-hidden="true">→</span></button><button class="strategy-trigger" type="button" data-strategy-client="${id}" aria-label="Estratégia de ${esc(c.name)}" title="Estratégia de campanha"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>`}).join("");
+ $("portfolio-grid").innerHTML=entries.map(({id,c,cur,state,results,spend})=>{const theme=themeFor(id,c);return`<div class="portfolio-card-shell"><button class="portfolio-card" type="button" data-client="${id}" style="--card-accent:${theme.darkPrimary||theme.primary}"><span class="portfolio-brand" style="background:${theme.logoBg}">${brandMark(theme,c,"")}</span><span class="portfolio-name"><strong>${esc(c.name)}</strong><small>${cur?`Semana ${cur.date}`:"Sem semana cadastrada"}</small></span><span class="portfolio-metric"><small>Investimento</small><strong>${brl(spend)}</strong></span><span class="portfolio-metric"><small>Resultados</small><strong>${num(results)}</strong></span><span class="portfolio-state ${state.cls}">${state.text}</span><span class="portfolio-arrow" aria-hidden="true">→</span></button><button class="logo-edit" type="button" data-logo-client="${id}" aria-label="Editar ${esc(c.name)}" title="Editar cliente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L8 18l-4 1 1-4z"/></svg></button><button class="strategy-trigger" type="button" data-strategy-client="${id}" aria-label="Estratégia de ${esc(c.name)}" title="Estratégia de campanha"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>`}).join("");
  $("portfolio-grid").querySelectorAll("[data-client]").forEach(button=>button.onclick=()=>openClient(button.dataset.client));
+ $("portfolio-grid").querySelectorAll("[data-logo-client]").forEach(button=>button.onclick=event=>{event.stopPropagation();openLogoDialog(button.dataset.logoClient)});
+ renderArchived();updateAccessButton();
  $("portfolio-grid").querySelectorAll("[data-strategy-client]").forEach(button=>button.onclick=event=>{event.stopPropagation();openStrategyDialog(button.dataset.strategyClient)});
 }
 function normStrategy(s){return String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().trim()}
@@ -287,7 +289,7 @@ async function saveStrategyEntry(event){
  finally{submit.disabled=false}
 }
 function updateAccessButton(){
- const logoBtn=$("logo-open");if(logoBtn)logoBtn.hidden=!window.accessControl?.isOwner||appView!=="client";
+ $("portfolio-grid").classList.toggle("is-owner",!!window.accessControl?.isOwner);
  const newBtn=$("client-new-open");if(newBtn)newBtn.hidden=!window.accessControl?.isOwner||appView!=="overview";
  const btn=$("access-open");if(!btn)return;btn.hidden=!window.accessControl?.isOwner||appView!=="overview";
 }
@@ -296,25 +298,55 @@ const slugify=name=>name.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().r
 function openNewClient(){
  $("client-new-form").reset();$("client-new-google-field").hidden=true;$("client-new-feedback").textContent="A logo pode ser adicionada depois; por enquanto o painel usa as iniciais na cor da marca.";$("client-new-feedback").className="budget-feedback";$("client-new-dialog").showModal();$("client-new-name").focus();
 }
+let logoTarget="";
 function renderLogoPreview(){
- const c=clients[client],theme=themeFor(client,c);$("logo-preview").style.background=theme.logoBg;$("logo-preview").innerHTML=brandMark(theme,c,`Logo ${esc(c.name)}`);$("logo-remove").hidden=!c.logoUrl;
+ const c=clients[logoTarget],theme=themeFor(logoTarget,c);$("logo-preview").style.background=theme.logoBg;$("logo-preview").innerHTML=brandMark(theme,c,`Logo ${esc(c.name)}`);$("logo-remove").hidden=!c.logoUrl;
+ $("client-archive").hidden=!!c.archived;$("client-restore").hidden=!c.archived;$("client-delete-box").hidden=!c.archived;$("client-delete-confirm").value="";$("client-delete").disabled=true;
 }
-function openLogoDialog(){
- $("logo-title").textContent=`Logo · ${clients[client].name}`;$("logo-feedback").textContent="";$("logo-feedback").className="budget-feedback";renderLogoPreview();$("logo-dialog").showModal();
+function openLogoDialog(clientId){
+ logoTarget=clientId;$("logo-title").textContent=`Editar · ${clients[clientId].name}`;$("logo-feedback").textContent="";$("logo-feedback").className="budget-feedback";renderLogoPreview();$("logo-dialog").showModal();
+}
+function refreshAfterClientChange(){
+ populate();renderOverview();if(appView==="client"&&clients[client])brand();
 }
 async function changeLogo(file){
- const feedback=$("logo-feedback"),targetClient=client;if(!file)return;
+ const feedback=$("logo-feedback"),targetClient=logoTarget;if(!file)return;
  feedback.textContent="Enviando logo…";feedback.className="budget-feedback";
  try{
   clients[targetClient].logoUrl=await window.performanceDb.saveClientLogo(targetClient,file);
-  if(client===targetClient){brand();renderLogoPreview()}feedback.textContent="Logo atualizada.";
+  if(logoTarget===targetClient)renderLogoPreview();refreshAfterClientChange();feedback.textContent="Logo atualizada.";
  }catch(error){console.error(error);feedback.textContent=error?.message?.startsWith("Use ")||error?.message?.startsWith("A imagem")?error.message:"Não foi possível enviar a logo. Tente novamente.";feedback.className="budget-feedback error"}
  finally{$("logo-file").value=""}
 }
 async function removeLogo(){
- const feedback=$("logo-feedback"),targetClient=client;
- try{await window.performanceDb.removeClientLogo(targetClient);clients[targetClient].logoUrl=null;brand();renderLogoPreview();feedback.textContent="Logo removida.";feedback.className="budget-feedback"}
+ const feedback=$("logo-feedback"),targetClient=logoTarget;
+ try{await window.performanceDb.removeClientLogo(targetClient);clients[targetClient].logoUrl=null;renderLogoPreview();refreshAfterClientChange();feedback.textContent="Logo removida.";feedback.className="budget-feedback"}
  catch(error){console.error(error);feedback.textContent="Não foi possível remover a logo.";feedback.className="budget-feedback error"}
+}
+const firstActiveClient=()=>Object.keys(clients).find(id=>!clients[id].archived)||"";
+async function setArchived(archived){
+ const id=logoTarget,feedback=$("logo-feedback");
+ try{
+  await window.performanceDb.archiveClient(id,archived);clients[id].archived=archived;
+  if(archived&&client===id){client=firstActiveClient();localStorage.setItem("performance-v2-client",client);if(appView==="client")showOverview()}
+  $("logo-dialog").close();refreshAfterClientChange();
+ }catch(error){console.error(error);feedback.textContent=archived?"Não foi possível arquivar o cliente.":"Não foi possível restaurar o cliente.";feedback.className="budget-feedback error"}
+}
+async function removeClientForever(){
+ const id=logoTarget,c=clients[id],feedback=$("logo-feedback");
+ if(!c?.archived||$("client-delete-confirm").value.trim()!==c.name)return;
+ $("client-delete").disabled=true;feedback.textContent="Excluindo…";feedback.className="budget-feedback";
+ try{
+  await window.performanceDb.deleteClient(id);delete clients[id];
+  ["performance-v2-imported-"+id,"performance-v2-selected-"+id].forEach(k=>{try{localStorage.removeItem(k)}catch{}});
+  $("logo-dialog").close();refreshAfterClientChange();
+ }catch(error){console.error(error);feedback.textContent=error?.code==="42501"?"Somente o proprietário pode excluir clientes.":"Não foi possível excluir o cliente.";feedback.className="budget-feedback error";$("client-delete").disabled=false}
+}
+function renderArchived(){
+ const list=Object.entries(clients).filter(([,c])=>c.archived),box=$("archived-section");box.hidden=!list.length;
+ $("archived-toggle").textContent=`Arquivados (${list.length})`;
+ $("archived-list").innerHTML=list.map(([id,c])=>`<div class="archived-row"><span>${esc(c.name)}</span><button type="button" class="secondary-button" data-archived-client="${id}">Gerenciar</button></div>`).join("");
+ $("archived-list").querySelectorAll("[data-archived-client]").forEach(button=>button.onclick=()=>openLogoDialog(button.dataset.archivedClient));
 }
 async function saveNewClient(event){
  event.preventDefault();
@@ -603,7 +635,8 @@ $("period-month").onclick=()=>{periodMode="month";$("period-week").setAttribute(
 $("quick-notes").oninput=e=>{localStorage.setItem(key(`notes-${selected}`),e.target.value);const cur=active();if(cur)cur.note=e.target.value;window.performanceDb?.saveNote(client,selected,e.target.value)};
 $("quick-action-form").onsubmit=async e=>{e.preventDefault();const input=$("quick-action"),button=e.currentTarget.querySelector("button"),title=input.value.trim();if(!title||button.disabled)return;const targetClient=client,targetDate=selected,previousActions=actions.map(action=>({...action})),snapshot=[...previousActions,{title,meta:"Prazo a definir",done:false}];actions=snapshot;const cur=active();if(cur)cur.actions=snapshot.map(action=>({...action}));input.value="";button.disabled=true;renderActions(cur);try{const persisted=await saveActions(targetClient,targetDate,snapshot);if(client===targetClient&&selected===targetDate){actions=persisted.map(action=>({...action}));renderActions(active())}}catch{if(client===targetClient&&selected===targetDate){actions=previousActions;const current=active();if(current)current.actions=previousActions.map(action=>({...action}));input.value=title;renderActions(current);input.focus()}}finally{button.disabled=false}};
 $("history-open").onclick=()=>{history();$("history-dialog").showModal()};$("history-close").onclick=()=>$("history-dialog").close();
-$("logo-open").onclick=openLogoDialog;$("logo-close").onclick=()=>$("logo-dialog").close();$("logo-pick").onclick=()=>$("logo-file").click();$("logo-file").onchange=e=>changeLogo(e.target.files[0]);$("logo-remove").onclick=removeLogo;
+$("client-archive").onclick=()=>setArchived(true);$("client-restore").onclick=()=>setArchived(false);$("client-delete").onclick=removeClientForever;$("client-delete-confirm").oninput=e=>{$("client-delete").disabled=e.target.value.trim()!==clients[logoTarget]?.name};$("archived-toggle").onclick=()=>{const l=$("archived-list");l.hidden=!l.hidden};
+$("logo-close").onclick=()=>$("logo-dialog").close();$("logo-pick").onclick=()=>$("logo-file").click();$("logo-file").onchange=e=>changeLogo(e.target.files[0]);$("logo-remove").onclick=removeLogo;
 $("client-new-open").onclick=openNewClient;["client-new-close","client-new-cancel"].forEach(id=>$(id).onclick=()=>$("client-new-dialog").close());$("client-new-form").onsubmit=saveNewClient;$("client-new-has-google").onchange=e=>{$("client-new-google-field").hidden=!e.target.checked};
 $("client-new-name").oninput=e=>{const init=$("client-new-initials");if(!init.dataset.touched)init.value=suggestInitials(e.target.value)};$("client-new-initials").oninput=e=>{e.target.dataset.touched="1"};$("client-new-form").onreset=()=>{delete $("client-new-initials").dataset.touched};
 $("strategy-close").onclick=()=>$("strategy-dialog").close();$("strategy-form").onsubmit=saveStrategyEntry;
