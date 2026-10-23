@@ -1,14 +1,14 @@
 # Status do projeto
 
-## Atualização — editar, arquivar e excluir cliente — 2026-10-23 (preview local, aguardando teste)
+## Atualização — editar, arquivar e excluir cliente — 2026-10-23 (no ar)
 
 - o botão de logo saiu do topo; na Visão Geral, ao passar o mouse sobre a logo do cliente aparece um lápis (só proprietário) que abre "Editar cliente": trocar/remover logo, **Arquivar cliente**;
 - arquivar (`clients.archived_at`) esconde o cliente da carteira, do seletor e dos totais, sem apagar dados; seção "Arquivados (n)" no fim da Visão Geral permite **Restaurar** ou **Excluir definitivamente**;
 - excluir só existe para cliente já arquivado e exige digitar o nome; apaga semanas, métricas, ações e estratégias (FK em cascata) e os arquivos de logo/criativos do storage — **sem volta**;
 - migração `supabase/010_archive_clients.sql` **aplicada no Supabase**: coluna `archived_at` + política restritiva `owner_only_delete_clients`; arquivar é restrito ao proprietário apenas pela interface (membros já podem atualizar `clients`);
-- validado só por simulação local (chamadas ao banco simuladas); **falta teste real logado**; produção ainda sem logo/arquivar; cache `20261023-3`; backups `*.bak_20261023_03`.
+- publicado: deploy `performance-jt1jb9i0q` + alias oficial; testado logado pelo usuário antes; rollback: `performance-b7zhsn8b2`; (antes: validado só por simulação local); **falta teste real logado**; produção ainda sem logo/arquivar; cache `20261023-3`; backups `*.bak_20261023_03`.
 
-## Atualização — logo do cliente — 2026-10-23 (preview local, aguardando teste)
+## Atualização — logo do cliente — 2026-10-23 (no ar)
 
 - ícone de imagem no topo (só proprietário, só com cliente aberto) abre diálogo "Logo do cliente": escolher imagem (JPG/PNG/WebP até 1 MB) ou remover; sem logo volta às iniciais;
 - arquivo vai para o bucket privado `performance-creatives` em `logos/<cliente>-<timestamp>.<ext>`, caminho em `clients.logo_path`; URL assinada de 1 h carregada em `loadDatabase()`; a logo antiga é apagada na troca;
