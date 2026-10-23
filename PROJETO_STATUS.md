@@ -1,5 +1,13 @@
 # Status do projeto
 
+## Atualização — logo do cliente — 2026-10-23 (preview local, aguardando teste)
+
+- ícone de imagem no topo (só proprietário, só com cliente aberto) abre diálogo "Logo do cliente": escolher imagem (JPG/PNG/WebP até 1 MB) ou remover; sem logo volta às iniciais;
+- arquivo vai para o bucket privado `performance-creatives` em `logos/<cliente>-<timestamp>.<ext>`, caminho em `clients.logo_path`; URL assinada de 1 h carregada em `loadDatabase()`; a logo antiga é apagada na troca;
+- vale também para os 10 clientes antigos (a logo enviada substitui a fixa; remover volta à fixa);
+- migração `supabase/009_client_logo.sql` **aplicada no Supabase**: coluna `logo_path` + políticas restritivas `owner_only_{insert,update,delete}_logos` (qualquer membro lê; só proprietário grava/apaga logos);
+- validado só por simulação local (upload falso); **falta testar upload real logado**; produção ainda na versão sem o botão de logo; cache `20261023-2`; backups `*.bak_20261023_02`.
+
 ## Atualização — cadastro de novo cliente — 2026-10-23 (no ar)
 
 - botão "+ Novo cliente" na Visão Geral (só aparece para o proprietário) abre formulário: nome, iniciais (sugeridas), cor da marca, modelo de métricas do Meta (Leads / Tráfego / Conversas), orçamentos, Google Ads, seguidores e YouTube;

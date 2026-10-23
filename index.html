@@ -47,6 +47,10 @@
       </div>
       <button class="import-trigger" id="import-open" type="button">Importar semana</button>
       <button class="budget-trigger-mobile" id="budget-open-mobile" type="button">Editar orçamento</button>
+      <button class="theme-toggle" id="logo-open" type="button" aria-label="Trocar logo do cliente" title="Logo do cliente" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 9"/></svg>
+        <span class="sr-only">Logo do cliente</span>
+      </button>
       <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Ativar modo escuro" aria-pressed="false" title="Ativar modo escuro">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/></svg>
         <span class="sr-only">Alternar tema</span>
@@ -251,6 +255,22 @@
     </form>
   </dialog>
 
+  <dialog class="budget-dialog logo-dialog" id="logo-dialog" aria-labelledby="logo-title">
+    <div class="budget-head">
+      <div><p class="overline">Identidade do cliente</p><h2 id="logo-title">Logo do cliente</h2><p>JPG, PNG ou WebP de até 1 MB. Imagens quadradas ficam melhores no círculo.</p></div>
+      <button id="logo-close" type="button" aria-label="Fechar logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="budget-body">
+      <div class="logo-preview" id="logo-preview"></div>
+      <input id="logo-file" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+      <p class="budget-feedback" id="logo-feedback" aria-live="polite"></p>
+    </div>
+    <div class="budget-footer">
+      <button class="secondary-button" id="logo-remove" type="button">Remover logo</button>
+      <button class="primary-button" id="logo-pick" type="button">Escolher imagem</button>
+    </div>
+  </dialog>
+
   <dialog class="history-dialog" id="history-dialog" aria-labelledby="history-title">
     <div class="history-head">
       <div><p class="overline">Seis registros</p><h2 id="history-title">Histórico da conta</h2><p>As variações da tela sempre usam a linha imediatamente anterior como referência.</p></div>
@@ -427,7 +447,7 @@
   <footer class="page-footer"><span id="footer-updated">Painel protegido</span><span id="footer-source">Dados carregados após autenticação</span></footer>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./supabase-config.js?v=20260916-1"></script>
-  <script src="./app.js?v=20261023-1"></script>
-  <script src="./supabase-app.js?v=20261023-1"></script>
+  <script src="./app.js?v=20261023-2"></script>
+  <script src="./supabase-app.js?v=20261023-2"></script>
 </body>
 </html>

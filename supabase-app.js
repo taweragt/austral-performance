@@ -334,8 +334,13 @@
       return { ...creative, signedUrl: signed.data?.signedUrl || null };
     }));
     const mappedWeeks = mapWeeks(weekResult.data, metricResult.data, actionResult.data, creativesWithUrls);
+    const logoUrls = new Map(await Promise.all(clientResult.data.filter((row) => row.logo_path).map(async (row) => {
+      const signed = await database.storage.from("performance-creatives").createSignedUrl(row.logo_path, 3600);
+      return [row.id, signed.data?.signedUrl || null];
+    })));
     clientResult.data.forEach((row) => {
       const current = clients[row.id] || {};
+      current.logoUrl = logoUrls.get(row.id) || null;
       current.name = row.name;
       current.initials = row.initials;
       current.metaBudget = Number(row.meta_budget || 0);
@@ -492,6 +497,26 @@
       }
       statusBadge.textContent = "Banco conectado";
       statusBadge.dataset.state = "ok";
+    },
+    async saveClientLogo(clientId, file) {
+      const types = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" };
+      if (!types[file.type]) throw new Error("Use JPG, PNG ou WebP.");
+      if (file.size > 1024 * 1024) throw new Error("A imagem deve ter até 1 MB.");
+      const previous = await database.from("clients").select("logo_path").eq("id", clientId).single();
+      const path = `logos/${clientId}-${Date.now()}.${types[file.type]}`;
+      const upload = await database.storage.from("performance-creatives").upload(path, file, { contentType: file.type });
+      if (upload.error) throw upload.error;
+      const update = await database.from("clients").update({ logo_path: path }).eq("id", clientId);
+      if (update.error) { await database.storage.from("performance-creatives").remove([path]); throw update.error; }
+      if (previous.data?.logo_path) await database.storage.from("performance-creatives").remove([previous.data.logo_path]);
+      const signed = await database.storage.from("performance-creatives").createSignedUrl(path, 3600);
+      return signed.data?.signedUrl || null;
+    },
+    async removeClientLogo(clientId) {
+      const previous = await database.from("clients").select("logo_path").eq("id", clientId).single();
+      const update = await database.from("clients").update({ logo_path: null }).eq("id", clientId);
+      if (update.error) throw update.error;
+      if (previous.data?.logo_path) await database.storage.from("performance-creatives").remove([previous.data.logo_path]);
     },
     async createClient(values) {
       statusBadge.textContent = "Criando cliente…";

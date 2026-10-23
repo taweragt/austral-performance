@@ -39,8 +39,8 @@ const clientThemes={
 
 const mixWhite=(hex,amount)=>{const n=parseInt(hex.slice(1),16),mix=shift=>Math.round(((n>>shift)&255)*(1-amount)+255*amount);return"#"+[16,8,0].map(s=>mix(s).toString(16).padStart(2,"0")).join("")};
 function themeFor(id,c){
- if(clientThemes[id])return clientThemes[id];
- if(c?.brandColor)return{logo:null,primary:c.brandColor,soft:mixWhite(c.brandColor,.9),accent:c.brandColor,logoBg:c.brandColor,initials:c.initials};
+ if(clientThemes[id])return c?.logoUrl?{...clientThemes[id],logo:c.logoUrl,logoBg:"#ffffff"}:clientThemes[id];
+ if(c?.brandColor)return{logo:c.logoUrl||null,primary:c.brandColor,soft:mixWhite(c.brandColor,.9),accent:c.brandColor,logoBg:c.logoUrl?"#ffffff":c.brandColor,initials:c.initials};
  return clientThemes["4medic"];
 }
 const brandMark=(theme,c,alt)=>theme.logo?`<img src="${theme.logo}" alt="${alt}">`:`<span class="brand-initials" aria-hidden="true">${esc(c.initials||c.name.slice(0,2).toUpperCase())}</span>`;
@@ -287,6 +287,7 @@ async function saveStrategyEntry(event){
  finally{submit.disabled=false}
 }
 function updateAccessButton(){
+ const logoBtn=$("logo-open");if(logoBtn)logoBtn.hidden=!window.accessControl?.isOwner||appView!=="client";
  const newBtn=$("client-new-open");if(newBtn)newBtn.hidden=!window.accessControl?.isOwner||appView!=="overview";
  const btn=$("access-open");if(!btn)return;btn.hidden=!window.accessControl?.isOwner||appView!=="overview";
 }
@@ -294,6 +295,26 @@ const suggestInitials=name=>{const words=name.trim().split(/\s+/).filter(Boolean
 const slugify=name=>name.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
 function openNewClient(){
  $("client-new-form").reset();$("client-new-google-field").hidden=true;$("client-new-feedback").textContent="A logo pode ser adicionada depois; por enquanto o painel usa as iniciais na cor da marca.";$("client-new-feedback").className="budget-feedback";$("client-new-dialog").showModal();$("client-new-name").focus();
+}
+function renderLogoPreview(){
+ const c=clients[client],theme=themeFor(client,c);$("logo-preview").style.background=theme.logoBg;$("logo-preview").innerHTML=brandMark(theme,c,`Logo ${esc(c.name)}`);$("logo-remove").hidden=!c.logoUrl;
+}
+function openLogoDialog(){
+ $("logo-title").textContent=`Logo · ${clients[client].name}`;$("logo-feedback").textContent="";$("logo-feedback").className="budget-feedback";renderLogoPreview();$("logo-dialog").showModal();
+}
+async function changeLogo(file){
+ const feedback=$("logo-feedback"),targetClient=client;if(!file)return;
+ feedback.textContent="Enviando logo…";feedback.className="budget-feedback";
+ try{
+  clients[targetClient].logoUrl=await window.performanceDb.saveClientLogo(targetClient,file);
+  if(client===targetClient){brand();renderLogoPreview()}feedback.textContent="Logo atualizada.";
+ }catch(error){console.error(error);feedback.textContent=error?.message?.startsWith("Use ")||error?.message?.startsWith("A imagem")?error.message:"Não foi possível enviar a logo. Tente novamente.";feedback.className="budget-feedback error"}
+ finally{$("logo-file").value=""}
+}
+async function removeLogo(){
+ const feedback=$("logo-feedback"),targetClient=client;
+ try{await window.performanceDb.removeClientLogo(targetClient);clients[targetClient].logoUrl=null;brand();renderLogoPreview();feedback.textContent="Logo removida.";feedback.className="budget-feedback"}
+ catch(error){console.error(error);feedback.textContent="Não foi possível remover a logo.";feedback.className="budget-feedback error"}
 }
 async function saveNewClient(event){
  event.preventDefault();
@@ -582,6 +603,7 @@ $("period-month").onclick=()=>{periodMode="month";$("period-week").setAttribute(
 $("quick-notes").oninput=e=>{localStorage.setItem(key(`notes-${selected}`),e.target.value);const cur=active();if(cur)cur.note=e.target.value;window.performanceDb?.saveNote(client,selected,e.target.value)};
 $("quick-action-form").onsubmit=async e=>{e.preventDefault();const input=$("quick-action"),button=e.currentTarget.querySelector("button"),title=input.value.trim();if(!title||button.disabled)return;const targetClient=client,targetDate=selected,previousActions=actions.map(action=>({...action})),snapshot=[...previousActions,{title,meta:"Prazo a definir",done:false}];actions=snapshot;const cur=active();if(cur)cur.actions=snapshot.map(action=>({...action}));input.value="";button.disabled=true;renderActions(cur);try{const persisted=await saveActions(targetClient,targetDate,snapshot);if(client===targetClient&&selected===targetDate){actions=persisted.map(action=>({...action}));renderActions(active())}}catch{if(client===targetClient&&selected===targetDate){actions=previousActions;const current=active();if(current)current.actions=previousActions.map(action=>({...action}));input.value=title;renderActions(current);input.focus()}}finally{button.disabled=false}};
 $("history-open").onclick=()=>{history();$("history-dialog").showModal()};$("history-close").onclick=()=>$("history-dialog").close();
+$("logo-open").onclick=openLogoDialog;$("logo-close").onclick=()=>$("logo-dialog").close();$("logo-pick").onclick=()=>$("logo-file").click();$("logo-file").onchange=e=>changeLogo(e.target.files[0]);$("logo-remove").onclick=removeLogo;
 $("client-new-open").onclick=openNewClient;["client-new-close","client-new-cancel"].forEach(id=>$(id).onclick=()=>$("client-new-dialog").close());$("client-new-form").onsubmit=saveNewClient;$("client-new-has-google").onchange=e=>{$("client-new-google-field").hidden=!e.target.checked};
 $("client-new-name").oninput=e=>{const init=$("client-new-initials");if(!init.dataset.touched)init.value=suggestInitials(e.target.value)};$("client-new-initials").oninput=e=>{e.target.dataset.touched="1"};$("client-new-form").onreset=()=>{delete $("client-new-initials").dataset.touched};
 $("strategy-close").onclick=()=>$("strategy-dialog").close();$("strategy-form").onsubmit=saveStrategyEntry;
