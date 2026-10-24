@@ -1,6 +1,8 @@
 # Status do projeto
 
-## Atualização — plataformas ativas e edição completa do cliente — 2026-10-24 (preview local, aguardando teste)
+> 2026-10-24: publicado `performance-66vimj7ou` com alias oficial (plataformas ativas + edição do cliente + correção de rolagem do diálogo, cache `20261024-3`), testado logado pelo usuário. Rollback: `performance-jt1jb9i0q`.
+
+## Atualização — plataformas ativas e edição completa do cliente — 2026-10-24 (no ar)
 
 - o lápis da logo (Visão Geral) agora edita o cliente inteiro: nome, iniciais, cor da marca (só clientes sem tema fixo), **Meta Ads ativo / Google Ads ativo** e orçamento de cada plataforma, além de logo, arquivar e excluir;
 - nova coluna `clients.has_meta` (padrão true) — migração `supabase/011_clients_has_meta.sql` **aplicada no Supabase**; `has_google` já existia;
