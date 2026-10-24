@@ -309,7 +309,7 @@ function fillClientEditForm(){
 }
 function renderLogoPreview(){
  const c=clients[logoTarget],theme=themeFor(logoTarget,c);fillClientEditForm();$("logo-preview").style.background=theme.logoBg;$("logo-preview").innerHTML=brandMark(theme,c,`Logo ${esc(c.name)}`);$("logo-remove").hidden=!c.logoUrl;
- $("client-archive").hidden=!!c.archived;$("client-restore").hidden=!c.archived;$("client-delete-box").hidden=!c.archived;$("client-delete-confirm").value="";$("client-delete").disabled=true;
+ $("client-archive").hidden=!!c.archived;$("client-delete-hint").hidden=!!c.archived;$("client-restore").hidden=!c.archived;$("client-delete-box").hidden=!c.archived;$("client-delete-confirm").value="";$("client-delete").disabled=true;
 }
 function openLogoDialog(clientId){
  logoTarget=clientId;$("logo-title").textContent=`Editar · ${clients[clientId].name}`;$("logo-feedback").textContent="";$("logo-feedback").className="budget-feedback";renderLogoPreview();$("logo-dialog").showModal();
