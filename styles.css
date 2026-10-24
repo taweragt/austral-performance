@@ -323,3 +323,11 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .archived-section{margin:18px 4px 0}.archived-list{display:grid;gap:6px;margin-top:10px}
 .archived-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;opacity:.85}
 @media (max-width:760px){.client-danger{padding:0 16px 12px}}
+
+/* Dados e plataformas do cliente */
+.client-edit-form{display:grid;gap:10px;padding:0 24px 16px}
+.client-edit-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.client-edit-hint{margin:0;font-size:12px;color:var(--muted,#667085)}
+.client-edit-form input[type="text"]{width:100%;height:40px;padding:0 12px;border:1px solid var(--line,#d6dbe5);border-radius:9px;background:transparent;color:inherit;font:inherit}
+.client-edit-form input[type="color"]{width:64px;height:40px;padding:2px;border:1px solid var(--line,#d6dbe5);border-radius:9px;background:transparent}
+@media (max-width:760px){.client-edit-form{padding:0 16px 12px}.client-edit-row{grid-template-columns:1fr}}

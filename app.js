@@ -37,6 +37,7 @@ const clientThemes={
  "oralwave":{logo:"./assets/logos/oralwave.jpg",logoScale:1.24,primary:"#087f79",soft:"#e7fbf9",accent:"#04b8ad",logoBg:"#04b8ad"}
 };
 
+const metaOn=c=>c?.hasMeta!==false;
 const mixWhite=(hex,amount)=>{const n=parseInt(hex.slice(1),16),mix=shift=>Math.round(((n>>shift)&255)*(1-amount)+255*amount);return"#"+[16,8,0].map(s=>mix(s).toString(16).padStart(2,"0")).join("")};
 function themeFor(id,c){
  if(clientThemes[id])return c?.logoUrl?{...clientThemes[id],logo:c.logoUrl,logoBg:"#ffffff"}:clientThemes[id];
@@ -187,8 +188,8 @@ function overviewStatus(cur,prev){
  return{text:"Estável",cls:"neutral"};
 }
 function renderOverview(){
- const entries=Object.entries(clients).filter(([,c])=>!c.archived).map(([id,c])=>{const ordered=[...(c.weeks||[])].sort((a,b)=>a.key.localeCompare(b.key));const cur=ordered.at(-1),prev=ordered.at(-2);return{id,c,cur,prev,state:overviewStatus(cur,prev),results:accountResults(cur),spend:accountSpend(cur)}});
- const budget=entries.reduce((sum,{c})=>sum+(Number(c.metaBudget)||0)+(Number(c.googleBudget)||0),0),spendValues=entries.map(x=>x.spend).filter(Number.isFinite),resultValues=entries.map(x=>x.results).filter(Number.isFinite),totalSpend=spendValues.reduce((a,b)=>a+b,0),totalResults=resultValues.reduce((a,b)=>a+b,0);
+ const entries=Object.entries(clients).filter(([,c])=>!c.archived).map(([id,c])=>{const ordered=[...(c.weeks||[])].sort((a,b)=>a.key.localeCompare(b.key));const strip=w=>w&&{...w,meta:metaOn(c)?w.meta:null,google:c.google?w.google:null};const cur=strip(ordered.at(-1)),prev=strip(ordered.at(-2));return{id,c,cur,prev,state:overviewStatus(cur,prev),results:accountResults(cur),spend:accountSpend(cur)}});
+ const budget=entries.reduce((sum,{c})=>sum+(metaOn(c)?Number(c.metaBudget)||0:0)+(c.google?Number(c.googleBudget)||0:0),0),spendValues=entries.map(x=>x.spend).filter(Number.isFinite),resultValues=entries.map(x=>x.results).filter(Number.isFinite),totalSpend=spendValues.reduce((a,b)=>a+b,0),totalResults=resultValues.reduce((a,b)=>a+b,0);
  $("overview-budget").textContent=brl(budget);$("overview-spend").textContent=spendValues.length?brl(totalSpend):"—";$("overview-results").textContent=resultValues.length?num(totalResults):"—";$("overview-cpr").textContent=totalSpend&&totalResults?brl(totalSpend/totalResults):"—";
  const newest=entries.map(x=>x.cur?.key).filter(Boolean).sort().at(-1);$("overview-period").textContent=newest?`Últimas semanas importadas · atualização mais recente em ${newest.split("-").reverse().join("/")}`:"Importe uma semana para iniciar o consolidado.";
  $("portfolio-grid").innerHTML=entries.map(({id,c,cur,state,results,spend})=>{const theme=themeFor(id,c);return`<div class="portfolio-card-shell"><button class="portfolio-card" type="button" data-client="${id}" style="--card-accent:${theme.darkPrimary||theme.primary}"><span class="portfolio-brand" style="background:${theme.logoBg}">${brandMark(theme,c,"")}</span><span class="portfolio-name"><strong>${esc(c.name)}</strong><small>${cur?`Semana ${cur.date}`:"Sem semana cadastrada"}</small></span><span class="portfolio-metric"><small>Investimento</small><strong>${brl(spend)}</strong></span><span class="portfolio-metric"><small>Resultados</small><strong>${num(results)}</strong></span><span class="portfolio-state ${state.cls}">${state.text}</span><span class="portfolio-arrow" aria-hidden="true">→</span></button><button class="logo-edit" type="button" data-logo-client="${id}" aria-label="Editar ${esc(c.name)}" title="Editar cliente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L8 18l-4 1 1-4z"/></svg></button><button class="strategy-trigger" type="button" data-strategy-client="${id}" aria-label="Estratégia de ${esc(c.name)}" title="Estratégia de campanha"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>`}).join("");
@@ -299,15 +300,42 @@ function openNewClient(){
  $("client-new-form").reset();$("client-new-google-field").hidden=true;$("client-new-feedback").textContent="A logo pode ser adicionada depois; por enquanto o painel usa as iniciais na cor da marca.";$("client-new-feedback").className="budget-feedback";$("client-new-dialog").showModal();$("client-new-name").focus();
 }
 let logoTarget="";
+function fillClientEditForm(){
+ const c=clients[logoTarget],fixed=Boolean(clientThemes[logoTarget]);
+ $("client-edit-name").value=c.name;$("client-edit-initials").value=c.initials||"";$("client-edit-color").value=c.brandColor||"#2457f5";$("client-edit-color-field").hidden=fixed;
+ $("client-edit-has-meta").checked=metaOn(c);$("client-edit-has-google").checked=Boolean(c.google);
+ $("client-edit-meta-budget").value=Number(c.metaBudget||0);$("client-edit-google-budget").value=Number(c.googleBudget||0);
+ $("client-edit-meta-field").hidden=!metaOn(c);$("client-edit-google-field").hidden=!c.google;
+}
 function renderLogoPreview(){
- const c=clients[logoTarget],theme=themeFor(logoTarget,c);$("logo-preview").style.background=theme.logoBg;$("logo-preview").innerHTML=brandMark(theme,c,`Logo ${esc(c.name)}`);$("logo-remove").hidden=!c.logoUrl;
+ const c=clients[logoTarget],theme=themeFor(logoTarget,c);fillClientEditForm();$("logo-preview").style.background=theme.logoBg;$("logo-preview").innerHTML=brandMark(theme,c,`Logo ${esc(c.name)}`);$("logo-remove").hidden=!c.logoUrl;
  $("client-archive").hidden=!!c.archived;$("client-restore").hidden=!c.archived;$("client-delete-box").hidden=!c.archived;$("client-delete-confirm").value="";$("client-delete").disabled=true;
 }
 function openLogoDialog(clientId){
  logoTarget=clientId;$("logo-title").textContent=`Editar · ${clients[clientId].name}`;$("logo-feedback").textContent="";$("logo-feedback").className="budget-feedback";renderLogoPreview();$("logo-dialog").showModal();
 }
 function refreshAfterClientChange(){
- populate();renderOverview();if(appView==="client"&&clients[client])brand();
+ populate();renderOverview();if(appView==="client"&&clients[client])render();
+}
+async function saveClientEdits(event){
+ event.preventDefault();
+ const id=logoTarget,c=clients[id],feedback=$("logo-feedback"),submit=event.currentTarget.querySelector('[type="submit"]');
+ const name=$("client-edit-name").value.trim(),initials=$("client-edit-initials").value.trim().toUpperCase(),hasMeta=$("client-edit-has-meta").checked,hasGoogle=$("client-edit-has-google").checked;
+ const metaBudget=Number($("client-edit-meta-budget").value)||0,googleBudget=Number($("client-edit-google-budget").value)||0;
+ if(!name||!initials){feedback.textContent="Informe o nome e as iniciais.";feedback.className="budget-feedback error";return}
+ if(!hasMeta&&!hasGoogle){feedback.textContent="Mantenha pelo menos uma plataforma ativa.";feedback.className="budget-feedback error";return}
+ const values={name,initials,has_meta:hasMeta,has_google:hasGoogle,meta_budget:metaBudget,google_budget:hasGoogle||googleBudget?googleBudget:null};
+ if(!clientThemes[id])values.brand_color=$("client-edit-color").value;
+ if(hasGoogle&&!(c.googleMetrics||[]).length)values.default_google_metrics=newClientPresets.leads.google;
+ submit.disabled=true;feedback.textContent="Salvando…";feedback.className="budget-feedback";
+ try{
+  await window.performanceDb.updateClient(id,values);
+  Object.assign(c,{name,initials,hasMeta,google:hasGoogle,metaBudget,googleBudget:values.google_budget});
+  if(values.brand_color)c.brandColor=values.brand_color;
+  if(values.default_google_metrics)c.googleMetrics=values.default_google_metrics.map(key=>googleCatalog.find(m=>m.key===key)).filter(Boolean);
+  $("logo-title").textContent=`Editar · ${name}`;refreshAfterClientChange();feedback.textContent="Dados do cliente atualizados.";
+ }catch(error){console.error(error);feedback.textContent="Não foi possível salvar. Tente novamente.";feedback.className="budget-feedback error"}
+ finally{submit.disabled=false}
 }
 async function changeLogo(file){
  const feedback=$("logo-feedback"),targetClient=logoTarget;if(!file)return;
@@ -377,26 +405,26 @@ function brand(){
  root.style.setProperty("--blue",root.dataset.theme==="dark"?(theme.darkPrimary||theme.primary):theme.primary);root.style.setProperty("--brand-soft",theme.soft);root.style.setProperty("--brand-accent",theme.accent);root.style.setProperty("--brand-logo-bg",theme.logoBg);
  const mark=document.querySelector(".brand-mark");mark.innerHTML=brandMark(theme,c,`Logo ${esc(c.name)}`);
  document.querySelector(".brand-copy small").textContent="Reunião de performance";
- $("meta-budget").textContent=compact(c.metaBudget);$("google-budget-label").hidden=!c.google;if(c.google)$("google-budget").textContent=compact(c.googleBudget);
- $("google-card").hidden=!c.google;document.querySelector(".platforms").classList.toggle("single",!c.google);
+ $("meta-budget-label").hidden=!metaOn(c);$("meta-budget").textContent=compact(c.metaBudget);$("google-budget-label").hidden=!c.google;if(c.google)$("google-budget").textContent=compact(c.googleBudget);
+ document.querySelector(".meta-card").hidden=!metaOn(c);$("google-card").hidden=!c.google;document.querySelector(".platforms").classList.toggle("single",!c.google||!metaOn(c));
  const hideCreative=c.showCreative===false;$("creative-toggle").setAttribute("aria-pressed",String(!hideCreative));$("ad-body").hidden=hideCreative;$("ad-empty").hidden=!hideCreative;
 }
 
 function openBudgetEditor(){
- const c=clients[client];$("budget-title").textContent=`Editar orçamento · ${c.name}`;$("budget-scope").textContent="Atualize os valores mensais previstos para as plataformas desta conta.";$("meta-budget-input").value=Number(c.metaBudget||0);$("google-budget-field").hidden=!c.google;$("google-budget-input").required=c.google;$("google-budget-input").value=c.google?Number(c.googleBudget||0):"";$("budget-feedback").textContent="Os valores serão salvos no cadastro deste cliente.";$("budget-feedback").className="budget-feedback";$("budget-dialog").showModal();
+ const c=clients[client];$("budget-title").textContent=`Editar orçamento · ${c.name}`;$("budget-scope").textContent="Atualize os valores mensais previstos para as plataformas desta conta.";$("meta-budget-input").value=Number(c.metaBudget||0);$("meta-budget-input").closest(".field-group").hidden=!metaOn(c);$("meta-budget-input").required=metaOn(c);$("google-budget-field").hidden=!c.google;$("google-budget-input").required=c.google;$("google-budget-input").value=c.google?Number(c.googleBudget||0):"";$("budget-feedback").textContent="Os valores serão salvos no cadastro deste cliente.";$("budget-feedback").className="budget-feedback";$("budget-dialog").showModal();
 }
 async function saveBudgets(event){
- event.preventDefault();const c=clients[client],meta=Number($("meta-budget-input").value),google=c.google?Number($("google-budget-input").value):null;
+ event.preventDefault();const c=clients[client],meta=metaOn(c)?Number($("meta-budget-input").value):Number(c.metaBudget||0),google=c.google?Number($("google-budget-input").value):null;
  if(!Number.isFinite(meta)||meta<0||c.google&&(!Number.isFinite(google)||google<0)){$("budget-feedback").textContent="Informe valores iguais ou maiores que zero.";$("budget-feedback").className="budget-feedback error";return}
  const submit=$("budget-form").querySelector('[type="submit"]');submit.disabled=true;$("budget-feedback").textContent="Salvando orçamento…";
  try{if(window.performanceDb?.ready)await window.performanceDb.saveBudgets(client,meta,google);c.metaBudget=meta;c.googleBudget=google;brand();$("budget-feedback").textContent="Orçamento atualizado no Supabase.";$("budget-feedback").className="budget-feedback success";setTimeout(()=>$("budget-dialog").close(),550)}catch(error){console.error(error);$("budget-feedback").textContent="Não foi possível salvar. Tente novamente.";$("budget-feedback").className="budget-feedback error"}finally{submit.disabled=false}
 }
 function status(cur,prev){
- const c=clients[client],metaDefs=effectiveMetrics("meta"),googleDefs=c.google?effectiveMetrics("google"):[],mh=health(metaDefs,cur.meta,prev?.meta),gh=c.google?health(googleDefs,cur.google,prev?.google):null;setHealth("meta-health",mh);if(gh)setHealth("google-health",gh);
+ const c=clients[client],metaDefs=effectiveMetrics("meta"),googleDefs=c.google?effectiveMetrics("google"):[],mh=metaOn(c)?health(metaDefs,cur.meta,prev?.meta):null,gh=c.google?health(googleDefs,cur.google,prev?.google):null;if(mh)setHealth("meta-health",mh);if(gh)setHealth("google-health",gh);
  const bad=[mh,gh].filter(Boolean).some(x=>x.cls==="bad"),good=[mh,gh].filter(Boolean).some(x=>x.cls==="good");
  $("status-title").innerHTML=bad?`Conta pede atenção. <span>${good?"Há evolução em outra frente.":"Revise os indicadores."}</span>`:good?'Semana positiva. <span>Os principais indicadores evoluíram.</span>':'Conta estável. <span>Sem mudança conclusiva.</span>';
  $("status-pill").textContent=bad?"Atenção":good?"Evolução":"Estável";
- const first=metaDefs[0],v=variation(cur.meta?.[first.key],prev?.meta?.[first.key]),g=c.google?variation(cur.google?.leads,prev?.google?.leads):null,p=[];
+ const first=metaDefs[0],v=metaOn(c)?variation(cur.meta?.[first.key],prev?.meta?.[first.key]):null,g=c.google?variation(cur.google?.leads,prev?.google?.leads):null,p=[];
  if(v!==null)p.push(`${first.label} no Meta ${v>=0?"subiram":"caíram"} ${Math.abs(v).toLocaleString("pt-BR",{maximumFractionDigits:1})}%`);
  if(g!==null)p.push(`leads no Google ${g>=0?"subiram":"caíram"} ${Math.abs(g).toLocaleString("pt-BR",{maximumFractionDigits:1})}%`);
  $("status-copy").textContent=p.length?`${p.join(". ")}.`:"Ainda não há base suficiente para comparar esta semana.";
@@ -418,13 +446,13 @@ function render(){
   return;
  }
  const{cur,prev}=periodViewFor(rawCur,rawPrev);
- brand();weekOptions();metrics($("meta-metrics"),metaDefs,cur.meta,prev?.meta,"meta");
+ brand();weekOptions();if(metaOn(c))metrics($("meta-metrics"),metaDefs,cur.meta,prev?.meta,"meta");
  if(c.google)metrics($("google-metrics"),googleDefs,cur.google||{},prev?.google||{},"google");status(cur,prev);renderActions(rawCur);
  $("quick-notes").value=window.performanceDb?.ready?(rawCur.note||""):(localStorage.getItem(key(`notes-${selected}`))||rawCur.note||"");
  const sourceLabel=periodMode==="month"?"Consolidado do mês":(rawCur.source==="csv"||rawCur.period?"CSV semanal":"Registro do documento");
  $("meta-source-label").textContent=sourceLabel;if(c.google)$("google-source-label").textContent=sourceLabel;
  $("google-insight").textContent=c.google?googleInsight(cur,prev):"";
- $("footer-updated").textContent=periodMode==="month"?`Consolidado de ${cur.date}`:`Atualizado em ${rawCur.date}`;$("footer-source").textContent=c.google?"Meta + Google · comparação semanal":"Meta Ads · comparação semanal";
+ $("footer-updated").textContent=periodMode==="month"?`Consolidado de ${cur.date}`:`Atualizado em ${rawCur.date}`;$("footer-source").textContent=`${[metaOn(c)&&"Meta",c.google&&"Google"].filter(Boolean).join(" + ")} · comparação semanal`;
  $("history-meta-count").textContent=metaDefs[0].label;$("history-meta-cost").textContent=metaDefs.find(x=>x.inverse)?.label||"Custo Meta";renderCreative();
 }
 function googleInsight(cur,prev){if(!cur.google)return"Sem dados do Google nesta semana.";const d=Number.isFinite(cur.google.leads)&&Number.isFinite(prev?.google?.leads)?cur.google.leads-prev.google.leads:null,p=variation(cur.google.cpl,prev?.google?.cpl);if(d===null&&p===null)return"Sem comparação com a semana anterior.";if(d===0&&(p===null||Math.abs(p)<.05))return"Leads e CPL estáveis em relação à semana anterior.";return`${d===null?"":d===0?"Leads estáveis":`${Math.abs(d)} ${Math.abs(d)===1?"lead":"leads"} ${d>0?"a mais":"a menos"}`}${d!==null&&p!==null?" e ":""}${p===null?"":Math.abs(p)<.05?"CPL estável":`CPL ${p>0?"maior":"menor"} em ${Math.abs(p).toLocaleString("pt-BR",{maximumFractionDigits:1})}%`} que na semana anterior.`}
@@ -561,7 +589,8 @@ function setupImport(){
  $("import-description").textContent=c.google?"Envie os relatórios do Meta e do Google. Cada objetivo será separado automaticamente.":"Envie o relatório do Meta. Cada objetivo será separado automaticamente.";
  $("import-tip").textContent=c.google?"Exporte no nível de campanhas. No Google, Pesquisa e Geração de Demanda com origem Site entram como leads; inscritos do YouTube ficam separados.":"Exporte no nível de campanhas. Formulários, mensagens e conversas de WhatsApp são separados e também consolidados como resultados.";
  const today=localIsoDate(new Date());$("import-date").value=today;$("import-date").max=today;
- ["meta-csv","google-csv"].forEach(id=>$(id).value="");$("new-followers-input").value="";$("meta-file-name").textContent=$("google-file-name").textContent="Selecionar relatório semanal";$("import-feedback").textContent=c.google?"Envie os CSVs no nível de campanha.":"Envie o CSV do Meta no nível de campanha.";
+ {const mOn=metaOn(c),names=[mOn&&"Meta",c.google&&"Google"].filter(Boolean);$("meta-upload-card").hidden=!mOn;$("meta-csv").required=mOn;$("followers-field").hidden=!(c.followers&&mOn);$("new-followers-input").required=Boolean(c.followers&&mOn);$("import-description").textContent=`Envie ${names.length>1?"os relatórios do "+names.join(" e do "):"o relatório do "+names[0]}. Cada objetivo será separado automaticamente.`}
+ ["meta-csv","google-csv"].forEach(id=>$(id).value="");$("new-followers-input").value="";$("meta-file-name").textContent=$("google-file-name").textContent="Selecionar relatório semanal";$("import-feedback").textContent=metaOn(c)&&c.google?"Envie os CSVs no nível de campanha.":"Envie o CSV no nível de campanha.";
 }
 function setupHistoryImport(){
  const c=clients[client];historyImportPreview=null;$("import-dialog").dataset.mode="history";document.querySelectorAll(".weekly-import-field").forEach(field=>field.hidden=true);$("history-import-panel").hidden=false;$("meta-csv").required=false;$("google-csv").required=false;$("new-followers-input").required=false;$("import-title").textContent=`Importar histórico · ${c.name}`;$("import-description").textContent="Envie os relatórios diários disponíveis para consolidar as semanas passadas.";["history-meta-csv","history-google-daily-csv","history-google-conversions-csv"].forEach(id=>$(id).value="");$("history-meta-file-name").textContent="Selecionar CSV com o período completo";$("history-google-daily-file-name").textContent="Cliques e custo por dia";$("history-google-conversions-file-name").textContent="Dia, ação de conversão e conversões";$("history-preview").className="history-preview";$("history-preview").textContent="Selecione os CSVs para conferir as semanas identificadas antes de importar.";$("import-submit").textContent="Importar semanas";
@@ -579,19 +608,19 @@ async function importSubmit(e){
  const mf=$("meta-csv").files[0];
  const gf=$("google-csv").files[0];
 
- if(!mf||c.google&&!gf){
+ if(metaOn(c)&&!mf||c.google&&!gf){
   $("import-feedback").textContent="Selecione todos os relatórios necessários.";
   return;
  }
 
   try{
    const referenceValue=validateReportDate($("import-date").value);
-   const meta=metaAggregate(csv(await mf.text()));
+   const meta=metaOn(c)?metaAggregate(csv(await mf.text())):null;
   const g=c.google?googleAggregate(csv(await gf.text())):null;
   const prev=active();
   const nf=numeric($("new-followers-input").value);
 
-  if(c.followers){
+  if(c.followers&&meta){
    meta.newFollowers=nf;
    meta.followers=Number.isFinite(prev.meta?.followers)&&Number.isFinite(nf)?prev.meta.followers+nf:null
   }
@@ -599,7 +628,7 @@ async function importSubmit(e){
    g.subscribers=Number.isFinite(prev.google?.subscribers)&&Number.isFinite(g.newSubscribers)?prev.google.subscribers+g.newSubscribers:null
   }
 
-  const item=W(referenceValue,meta,g,[]);item.source="csv";
+  const item=W(referenceValue,meta,g,[]);item.source="csv";if(!meta)delete item.meta;
 
   // Salva primeiro no navegador. A cópia local só é removida após confirmação real do Supabase.
   queueImported(item,client);
@@ -635,6 +664,7 @@ $("period-month").onclick=()=>{periodMode="month";$("period-week").setAttribute(
 $("quick-notes").oninput=e=>{localStorage.setItem(key(`notes-${selected}`),e.target.value);const cur=active();if(cur)cur.note=e.target.value;window.performanceDb?.saveNote(client,selected,e.target.value)};
 $("quick-action-form").onsubmit=async e=>{e.preventDefault();const input=$("quick-action"),button=e.currentTarget.querySelector("button"),title=input.value.trim();if(!title||button.disabled)return;const targetClient=client,targetDate=selected,previousActions=actions.map(action=>({...action})),snapshot=[...previousActions,{title,meta:"Prazo a definir",done:false}];actions=snapshot;const cur=active();if(cur)cur.actions=snapshot.map(action=>({...action}));input.value="";button.disabled=true;renderActions(cur);try{const persisted=await saveActions(targetClient,targetDate,snapshot);if(client===targetClient&&selected===targetDate){actions=persisted.map(action=>({...action}));renderActions(active())}}catch{if(client===targetClient&&selected===targetDate){actions=previousActions;const current=active();if(current)current.actions=previousActions.map(action=>({...action}));input.value=title;renderActions(current);input.focus()}}finally{button.disabled=false}};
 $("history-open").onclick=()=>{history();$("history-dialog").showModal()};$("history-close").onclick=()=>$("history-dialog").close();
+$("client-edit-form").onsubmit=saveClientEdits;$("client-edit-has-meta").onchange=e=>{$("client-edit-meta-field").hidden=!e.target.checked};$("client-edit-has-google").onchange=e=>{$("client-edit-google-field").hidden=!e.target.checked};
 $("client-archive").onclick=()=>setArchived(true);$("client-restore").onclick=()=>setArchived(false);$("client-delete").onclick=removeClientForever;$("client-delete-confirm").oninput=e=>{$("client-delete").disabled=e.target.value.trim()!==clients[logoTarget]?.name};$("archived-toggle").onclick=()=>{const l=$("archived-list");l.hidden=!l.hidden};
 $("logo-close").onclick=()=>$("logo-dialog").close();$("logo-pick").onclick=()=>$("logo-file").click();$("logo-file").onchange=e=>changeLogo(e.target.files[0]);$("logo-remove").onclick=removeLogo;
 $("client-new-open").onclick=openNewClient;["client-new-close","client-new-cancel"].forEach(id=>$(id).onclick=()=>$("client-new-dialog").close());$("client-new-form").onsubmit=saveNewClient;$("client-new-has-google").onchange=e=>{$("client-new-google-field").hidden=!e.target.checked};

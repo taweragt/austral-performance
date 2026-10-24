@@ -342,6 +342,7 @@
       const current = clients[row.id] || {};
       current.logoUrl = logoUrls.get(row.id) || null;
       current.archived = Boolean(row.archived_at);
+      current.hasMeta = row.has_meta !== false;
       current.name = row.name;
       current.initials = row.initials;
       current.metaBudget = Number(row.meta_budget || 0);
@@ -518,6 +519,10 @@
       const update = await database.from("clients").update({ logo_path: null }).eq("id", clientId);
       if (update.error) throw update.error;
       if (previous.data?.logo_path) await database.storage.from("performance-creatives").remove([previous.data.logo_path]);
+    },
+    async updateClient(clientId, values) {
+      const result = await database.from("clients").update(values).eq("id", clientId);
+      if (result.error) throw result.error;
     },
     async archiveClient(clientId, archived) {
       const result = await database.from("clients").update({ archived_at: archived ? new Date().toISOString() : null }).eq("id", clientId);

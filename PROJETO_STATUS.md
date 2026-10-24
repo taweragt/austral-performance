@@ -1,5 +1,13 @@
 # Status do projeto
 
+## Atualização — plataformas ativas e edição completa do cliente — 2026-10-24 (preview local, aguardando teste)
+
+- o lápis da logo (Visão Geral) agora edita o cliente inteiro: nome, iniciais, cor da marca (só clientes sem tema fixo), **Meta Ads ativo / Google Ads ativo** e orçamento de cada plataforma, além de logo, arquivar e excluir;
+- nova coluna `clients.has_meta` (padrão true) — migração `supabase/011_clients_has_meta.sql` **aplicada no Supabase**; `has_google` já existia;
+- plataforma pausada: histórico preservado; card e orçamento somem da página do cliente; importação exige só o CSV das plataformas ativas (seguidores só pedem com Meta ativo); totais da Visão Geral ignoram orçamento e dados da plataforma pausada; religar traz tudo de volta (Google ligado pela 1ª vez ganha métricas padrão leads/CPL);
+- é obrigatório manter pelo menos uma plataforma ativa;
+- validado só por simulação (cliente só Google, só Meta, formulário, totais); **falta teste real logado, incluindo importar uma semana só com Google**; cache `20261024-1`; backups `*.bak_20261023_04`; produção ainda sem esta mudança.
+
 ## Atualização — editar, arquivar e excluir cliente — 2026-10-23 (no ar)
 
 - o botão de logo saiu do topo; na Visão Geral, ao passar o mouse sobre a logo do cliente aparece um lápis (só proprietário) que abre "Editar cliente": trocar/remover logo, **Arquivar cliente**;
