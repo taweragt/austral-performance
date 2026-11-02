@@ -2,6 +2,27 @@
 
 > 2026-10-24: publicado `performance-66vimj7ou` com alias oficial (plataformas ativas + edição do cliente + correção de rolagem do diálogo, cache `20261024-3`), testado logado pelo usuário. Rollback: `performance-jt1jb9i0q`.
 
+## Atualização — prazo da tarefa e envio ao Trello — 2026-11-01 (só local, NÃO publicado, migration 012 aplicada)
+
+- formulário "Adicionar uma ação rápida" ganhou campo de data (prazo); a tarefa mostra "Prazo dd/mm"; o lápis edita título e prazo (dd/mm/aaaa);
+- tarefa trazida da semana anterior guarda `carried_from`, o prazo e o id do cartão (mesmo cartão vai para a lista "Atrasado", sem duplicar);
+- `supabase/012_actions_due_trello.sql` (APLICADA no Supabase em 2026-11-01): colunas `due_date`, `carried_from`, `external_id`, `external_url` em `actions`, todas vazias por padrão; reversão comentada no fim do arquivo;
+- `supabase/functions/trello-sync/index.ts` (IMPLANTADA no Supabase em 2026-11-01, versão 1, verify_jwt ligado; secrets cadastrados; ainda não testada com o Trello): cria/atualiza cartão por tarefa no quadro `JQh2FmQd` (listas A fazer / Atrasado / Concluído, etiqueta com o nome do cliente), arquiva o cartão da tarefa excluída; chave e token só em secrets (`TRELLO_KEY`, `TRELLO_TOKEN`, `TRELLO_BOARD`, `TRELLO_ENABLED`); desligar = `TRELLO_ENABLED` diferente de `true`;
+- correção antes do deploy: `getUser()` na função agora recebe o JWT do chamador; envios ao Trello de uma mesma semana ficam em fila no front (evita cartão duplicado);
+- Trello: título do cartão com dia da semana e data ("Seg 10/11 · Cliente · tarefa") e posição na lista por data de entrega; sem calendário (é Premium); função na versão 5: colunas por dia da semana atual (Segunda...Sexta, opcionais), data passada ou trazida vai para Atrasado, semana futura ou sem data em A fazer;
+- `supabase-app.js`: lê/grava os campos novos e expõe `syncTrello` (falha do Trello nunca derruba o salvamento);
+- ATENÇÃO: este front grava `due_date`/`carried_from`; a 012 já está aplicada; sem ela salvar tarefas dá erro. Ordem de publicação: migration → secrets → função → deploy do front;
+- validado só no preview local sem login (campo de data, prazo exibido); função e integração com o Trello NÃO testadas; cache `20261101-2`; backups `*.bak_20261101_02`.
+
+## Atualização — editar/excluir tarefa e trazer pendentes — 2026-11-01 (só local, NÃO publicado)
+
+- cada tarefa em "Próximas ações" ganhou lápis (editar texto) e lixeira (excluir, com confirmação); aparecem ao passar o mouse (sempre visíveis no celular);
+- ao **importar uma semana nova** (CSV), as tarefas **não concluídas da semana imediatamente anterior** são copiadas para ela, com a nota "da semana dd/mm" (a original permanece no histórico; a origem mais antiga é preservada se a tarefa passar por várias semanas); se a semana já existia com tarefas, nada é copiado;
+- sem migration: o banco já apagava as tarefas removidas da lista (`saveActions`); nenhuma mudança em `supabase-app.js`;
+- testes: `persistence.test.mjs` ganhou caso de `carryOverActions` (passa); `report-date.test.mjs` passa;
+- validado só em preview local sem login (semana simulada em memória): editar e excluir funcionam e o visual está ok; **falta teste real logado**: editar, excluir, importar uma semana e conferir as tarefas trazidas no banco; produção sem esta mudança; cache `20261101-1`; backups `*.bak_20261101`;
+- próximos passos combinados: (2) campo de data na tarefa (migration 012) e (3) envio das tarefas ao Trello via Edge Function, com chave para ligar/desligar.
+
 ## Atualização — plataformas ativas e edição completa do cliente — 2026-10-24 (no ar)
 
 - o lápis da logo (Visão Geral) agora edita o cliente inteiro: nome, iniciais, cor da marca (só clientes sem tema fixo), **Meta Ads ativo / Google Ads ativo** e orçamento de cada plataforma, além de logo, arquivar e excluir;

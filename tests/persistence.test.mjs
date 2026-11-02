@@ -103,3 +103,29 @@ assert.equal(pendingWithActions.weeks[0].meta.leads, 5, "Importação pendente d
 assert.equal(pendingWithActions.weeks[0].actions.length, 1, "Importação pendente não pode apagar as ações do banco");
 
 console.log("Persistência validada: cache após recarga, retenção offline e edição individual sincronizada.");
+
+// Tarefas pendentes da semana anterior entram na semana nova
+{
+  const ctx = {};
+  vm.createContext(ctx);
+  const fnStart = source.indexOf("function carryOverActions");
+  const fnEnd = source.indexOf("\n", fnStart);
+  vm.runInContext(`${source.slice(fnStart, fnEnd)}\nthis.carry=carryOverActions;`, ctx);
+  const weeks = [
+    { key: "2026-10-20", actions: [{ title: "Antiga", meta: "Prazo a definir", done: false }] },
+    { key: "2026-10-27", actions: [
+      { id: "a", title: "Turbinar post dia 05/11", meta: "Prazo a definir", done: false },
+      { id: "b", title: "Feita", meta: "x", done: true },
+      { id: "c", title: "Ajustar público", meta: "até sexta", done: false },
+      { id: "d", title: "Veio de antes", meta: "da semana 20/10", done: false },
+    ] },
+  ];
+  const carried = Array.from(ctx.carry(weeks, "2026-11-03"), (a) => ({ ...a }));
+  assert.deepEqual(carried.map((a) => a.title), ["Turbinar post dia 05/11", "Ajustar público", "Veio de antes"], "só pendentes da semana imediatamente anterior");
+  assert.equal(carried[0].meta, "da semana 27/10");
+  assert.equal(carried[1].meta, "até sexta · da semana 27/10");
+  assert.equal(carried[2].meta, "da semana 20/10", "origem mais antiga é preservada");
+  assert.ok(carried.every((a) => a.done === false && !("id" in a)), "cópias novas, sem id da linha original");
+  assert.equal(ctx.carry(weeks, "2026-10-20").length, 0, "sem semana anterior não traz nada");
+}
+console.log("carryOverActions ok");

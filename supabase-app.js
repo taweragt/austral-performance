@@ -17,6 +17,8 @@
   const weekIds = new Map();
   const metricVersionsByClient = new Map();
   const actionSaveQueues = new Map();
+const cardsToArchive = [];
+const trelloSyncQueues = new Map();
   // Última lista de ações confirmada pelo banco em cada semana (cliente:data).
   const knownActions = new Map();
   const isUuid = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || ""));
@@ -262,7 +264,7 @@
     const actionsByWeek = new Map();
     actionRows.forEach((row) => {
       const current = actionsByWeek.get(row.week_id) || [];
-      current.push({ id: row.id, title: row.title, meta: row.details, done: row.done });
+      current.push({ id: row.id, title: row.title, meta: row.details, done: row.done, due: row.due_date || null, carried_from: row.carried_from || null, external_id: row.external_id || null });
       actionsByWeek.set(row.week_id, current);
     });
     knownActions.clear();
@@ -560,6 +562,27 @@
       statusBadge.textContent = "Banco conectado";
       statusBadge.dataset.state = "ok";
     },
+    async syncTrello(clientId, referenceDate) {
+      // Envio ao Trello nunca bloqueia nem derruba o salvamento: a falha só aparece no console.
+      // Fila por semana: duas chamadas ao mesmo tempo criariam dois cartões para a mesma tarefa.
+      const queueKey = `${clientId}:${referenceDate}`;
+      const previous = trelloSyncQueues.get(queueKey) || Promise.resolve();
+      const queued = previous.catch(() => {}).then(async () => {
+        try {
+          const weekId = await withWeekId(clientId, referenceDate);
+          const archive = cardsToArchive.splice(0);
+          const result = await database.functions.invoke("trello-sync", { body: { week_id: weekId, archive } });
+          if (result.error) throw result.error;
+          if (result.data?.failures?.length) console.warn("Trello: falhas parciais", result.data.failures);
+          return result.data?.synced || [];
+        } catch (error) {
+          console.warn("Trello: sincronização não concluída", error);
+          return null;
+        }
+      });
+      trelloSyncQueues.set(queueKey, queued);
+      return queued;
+    },
     async saveActions(clientId, referenceDate, values) {
       const queueKey = `${clientId}:${referenceDate}`;
       const snapshot = values
@@ -568,6 +591,9 @@
           title: String(value.title || "").trim(),
           details: value.meta || "",
           done: Boolean(value.done),
+          due: /^\d{4}-\d{2}-\d{2}$/.test(value.due || "") ? value.due : null,
+          carried_from: /^\d{4}-\d{2}-\d{2}$/.test(value.carried_from || "") ? value.carried_from : null,
+          external_id: value.external_id || null,
         }))
         .filter((value) => value.title)
         .map((value, position) => ({ ...value, position }));
@@ -588,6 +614,9 @@
         });
         const removedIds = known.map((item) => item.id).filter((id) => !claimed.has(id));
         if (removedIds.length) {
+          // Guarda os cartões do Trello das tarefas excluídas para arquivá-los depois.
+          const cards = await database.from("actions").select("external_id").eq("week_id", weekId).in("id", removedIds);
+          (cards.data || []).forEach((card) => card.external_id && cardsToArchive.push(card.external_id));
           const removed = await database.from("actions").delete().eq("week_id", weekId).in("id", removedIds);
           if (removed.error) throw removed.error;
         }
@@ -598,7 +627,10 @@
             details: action.details,
             done: action.done,
             position: action.position,
+            due_date: action.due,
+            carried_from: action.carried_from,
           };
+          if (action.external_id) row.external_id = action.external_id;
           if (action.id) {
             const updated = await database.from("actions")
               .update(row)
@@ -622,6 +654,9 @@
           title: action.title,
           meta: action.details,
           done: action.done,
+          due: action.due,
+          carried_from: action.carried_from,
+          external_id: action.external_id,
         }));
       });
       actionSaveQueues.set(queueKey, queued);

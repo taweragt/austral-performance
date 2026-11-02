@@ -335,3 +335,16 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 /* Diálogo de edição do cliente: rola quando a tela é menor que o conteúdo */
 .logo-dialog{max-height:calc(100vh - 36px);overflow-y:auto}
 .logo-dialog .budget-head{position:sticky;top:0;z-index:2;background:var(--surface)}
+
+/* Tarefas: editar e excluir */
+.action-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.action-row .action-item { flex: 1; min-width: 0; }
+.action-tool { display: grid; place-items: center; flex: 0 0 26px; width: 26px; height: 26px; padding: 0; color: var(--muted); background: transparent; border: 0; border-radius: 6px; cursor: pointer; opacity: 0; transition: opacity .15s ease, color .15s ease, background .15s ease; }
+.action-tool svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.action-row:hover .action-tool, .action-tool:focus-visible { opacity: 1; }
+.action-tool:hover { color: var(--blue); background: var(--paper); }
+.action-tool[data-del]:hover { color: #c0392b; }
+@media (hover: none) { .action-tool { opacity: 1; } }
+
+/* Prazo da tarefa */
+.quick-action-form input[type="date"] { flex: 0 0 auto; width: 118px; padding: 0 6px; border-radius: 0; border-right: 0; font-family: inherit; }

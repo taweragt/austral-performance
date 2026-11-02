@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20260922-4">
+  <link rel="stylesheet" href="./styles.css?v=20261101-2">
 </head>
 <body>
   <a class="skip-link" href="#resumo">Ir para o resumo</a>
@@ -127,6 +127,7 @@
             <form id="quick-action-form" class="quick-action-form">
               <label class="sr-only" for="quick-action">Nova ação</label>
               <input id="quick-action" type="text" placeholder="Adicionar uma ação rápida" autocomplete="off">
+              <input id="quick-action-date" type="date" aria-label="Prazo da ação" title="Prazo (opcional)">
               <button type="submit" aria-label="Adicionar ação"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
             </form>
           </div>
@@ -475,7 +476,7 @@
   <footer class="page-footer"><span id="footer-updated">Painel protegido</span><span id="footer-source">Dados carregados após autenticação</span></footer>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./supabase-config.js?v=20260916-1"></script>
-  <script src="./app.js?v=20261024-3"></script>
-  <script src="./supabase-app.js?v=20261024-3"></script>
+  <script src="./app.js?v=20261101-2"></script>
+  <script src="./supabase-app.js?v=20261101-2"></script>
 </body>
 </html>
