@@ -3,6 +3,14 @@
 > 2026-11-02: publicado `performance-l2sjj6wq5` com alias oficial (editar/excluir tarefa, prazo, pendentes na semana nova, envio ao Trello por dia da semana; cache `20261101-2`; commit `95e58c0`). Rollback: `performance-66vimj7ou` (`vercel alias set performance-66vimj7ou-austral-app.vercel.app performance-austral-app.vercel.app`).
 > 2026-10-24: publicado `performance-66vimj7ou` com alias oficial (plataformas ativas + edição do cliente + correção de rolagem do diálogo, cache `20261024-3`), testado logado pelo usuário. Rollback: `performance-jt1jb9i0q`.
 
+## Atualização — rotina diária do Trello — 2026-11-02 (NO AR no Supabase, sem mudança no site)
+
+- função `trello-daily` (sem login, protegida por `x-cron-secret` = secret `CRON_SECRET`; `verify_jwt` desligado): todo dia reposiciona os cartões abertos de tarefas NÃO concluídas na coluna certa (data de hoje na semana vai para a coluna do dia; data passada ou tarefa trazida vai para Atrasado; semana futura ou sem data em A fazer); só move cartão, nunca cria, apaga ou arquiva; usa a chave de serviço do Supabase só no servidor;
+- agendada com `pg_cron` (`trello-daily`, `0 9 * * *` UTC = 06:00 de Brasília); migração `supabase/013_trello_daily_cron.sql` APLICADA (arquivo sem o segredo); extensões `pg_net` e `pg_cron` instaladas;
+- teste manual em 2026-11-02: resposta 200, 6 tarefas abertas com cartão, 0 movidas, 0 falhas;
+- desligar: `select cron.unschedule('trello-daily');` ou trocar `TRELLO_ENABLED` para qualquer valor diferente de `true`; segredo guardado em `credenciais/austral-cron.env` (fora do projeto);
+- ainda não vista rodando sozinha: conferir amanhã depois das 06:00 em `net._http_response` e nos logs da função.
+
 ## Atualização — prazo da tarefa e envio ao Trello — 2026-11-01 (NO AR desde 2026-11-02, migration 012 aplicada, função trello-sync versão 5)
 
 - formulário "Adicionar uma ação rápida" ganhou campo de data (prazo); a tarefa mostra "Prazo dd/mm"; o lápis edita título e prazo (dd/mm/aaaa);
