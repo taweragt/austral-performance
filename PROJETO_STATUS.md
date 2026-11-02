@@ -1,8 +1,9 @@
 # Status do projeto
 
+> 2026-11-02: publicado `performance-l2sjj6wq5` com alias oficial (editar/excluir tarefa, prazo, pendentes na semana nova, envio ao Trello por dia da semana; cache `20261101-2`; commit `95e58c0`). Rollback: `performance-66vimj7ou` (`vercel alias set performance-66vimj7ou-austral-app.vercel.app performance-austral-app.vercel.app`).
 > 2026-10-24: publicado `performance-66vimj7ou` com alias oficial (plataformas ativas + edição do cliente + correção de rolagem do diálogo, cache `20261024-3`), testado logado pelo usuário. Rollback: `performance-jt1jb9i0q`.
 
-## Atualização — prazo da tarefa e envio ao Trello — 2026-11-01 (só local, NÃO publicado, migration 012 aplicada)
+## Atualização — prazo da tarefa e envio ao Trello — 2026-11-01 (NO AR desde 2026-11-02, migration 012 aplicada, função trello-sync versão 5)
 
 - formulário "Adicionar uma ação rápida" ganhou campo de data (prazo); a tarefa mostra "Prazo dd/mm"; o lápis edita título e prazo (dd/mm/aaaa);
 - tarefa trazida da semana anterior guarda `carried_from`, o prazo e o id do cartão (mesmo cartão vai para a lista "Atrasado", sem duplicar);
@@ -12,9 +13,9 @@
 - Trello: título do cartão com dia da semana e data ("Seg 10/11 · Cliente · tarefa") e posição na lista por data de entrega; sem calendário (é Premium); função na versão 5: colunas por dia da semana atual (Segunda...Sexta, opcionais), data passada ou trazida vai para Atrasado, semana futura ou sem data em A fazer;
 - `supabase-app.js`: lê/grava os campos novos e expõe `syncTrello` (falha do Trello nunca derruba o salvamento);
 - ATENÇÃO: este front grava `due_date`/`carried_from`; a 012 já está aplicada; sem ela salvar tarefas dá erro. Ordem de publicação: migration → secrets → função → deploy do front;
-- validado só no preview local sem login (campo de data, prazo exibido); função e integração com o Trello NÃO testadas; cache `20261101-2`; backups `*.bak_20261101_02`.
+- validado no preview local logado pelo usuário (adicionar com e sem data, cartões no Trello nas colunas Atrasado/Segunda…Sexta/A fazer/Concluído); site público conferido por arquivos, versão do cache e console sem erros; **falta**: rotina diária que reorganize os cartões ao virar o dia/semana (hoje só mudam quando a semana do cliente é salva); cache `20261101-2`; backups `*.bak_20261101_02`.
 
-## Atualização — editar/excluir tarefa e trazer pendentes — 2026-11-01 (só local, NÃO publicado)
+## Atualização — editar/excluir tarefa e trazer pendentes — 2026-11-01 (NO AR desde 2026-11-02)
 
 - cada tarefa em "Próximas ações" ganhou lápis (editar texto) e lixeira (excluir, com confirmação); aparecem ao passar o mouse (sempre visíveis no celular);
 - ao **importar uma semana nova** (CSV), as tarefas **não concluídas da semana imediatamente anterior** são copiadas para ela, com a nota "da semana dd/mm" (a original permanece no histórico; a origem mais antiga é preservada se a tarefa passar por várias semanas); se a semana já existia com tarefas, nada é copiado;
